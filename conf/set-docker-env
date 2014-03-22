@@ -1,0 +1,4 @@
+if ! grep "CONTAINERS_BASE" /etc/environment >/dev/null
+then
+	echo "CONTAINERS_BASE=\"/srv/containers-data\"" >> /etc/environment
+fi

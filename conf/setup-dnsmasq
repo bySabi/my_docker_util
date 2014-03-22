@@ -1,0 +1,18 @@
+#!/bin/bash
+
+DNSMASQD=/srv/dnsmasq.d
+
+if ! grep "## bySabi" /etc/dnsmasq.conf >/dev/null
+then
+cat <<EOF >> /etc/dnsmasq.conf
+
+## bySabi
+conf-dir=${DNSMASQD}
+EOF
+
+mkdir -p ${DNSMASQD}
+
+
+install -m 644 conf/dnsmasq.conf ${DNSMASQD}/
+install -m 644 conf/hosts_.lan ${DNSMASQD}/
+install -m 644 conf/hosts_.dev ${DNSMASQD}/
