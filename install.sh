@@ -71,6 +71,7 @@ setup_script() {
 			git clone https://github.com/bySabi/${project_dir}.git
 		exit_func $?
 		cd ${project_dir}
+		git-crypt init ~/.git-crypt/git-crypt.key
 		chmod +x install.sh && ./install.sh &
 		exit 0
 	fi
