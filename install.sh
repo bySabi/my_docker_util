@@ -69,6 +69,7 @@ setup_script() {
 			exit_func $?
 		fi
 		echo ">> clone \"${project_dir}\" repo"
+			[ -d ${project_dir} ] && rm -fr ${project_dir}
 			git clone https://github.com/bySabi/${project_dir}.git
 		exit_func $?
 		cd ${project_dir}
