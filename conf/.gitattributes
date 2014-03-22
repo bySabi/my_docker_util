@@ -1,2 +1,0 @@
-hosts_.* filter=git-crypt diff=git-crypt
-dnsmasq.conf filter=git-crypt diff=git-crypt
