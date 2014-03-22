@@ -13,8 +13,8 @@ script_dir_parent=${PWD##*/}
 
 main() {
 	isrootuser
+	setup_script ${script_dir_parent}
 
-	setup_script
 	install_packages
 	install_docker
 	set_docker_env
@@ -30,7 +30,7 @@ install_packages() {
 }
 
 install_docker() {
-	echo ">> Install packages"
+	echo ">> Install docker"
 		source conf/docker-install 1>/dev/null
 	exit_func $?
 }
