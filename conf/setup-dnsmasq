@@ -1,10 +1,8 @@
-#!/bin/bash
-
 DNSMASQD=/srv/dnsmasq.d
 
 if ! grep "## bySabi" /etc/dnsmasq.conf >/dev/null
 then
-cat <<EOF >> /etc/dnsmasq.conf
+cat >> /etc/dnsmasq.conf <<EOF
 
 ## bySabi
 conf-dir=${DNSMASQD}
