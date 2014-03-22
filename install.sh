@@ -43,7 +43,7 @@ set_docker_env() {
 
 set_dnsmasq() {
 	echo ">> Set dnsmasq"
-		source conf/set-dnsmasq
+		source conf/setup-dnsmasq
 	exit_func $?
 }
 
