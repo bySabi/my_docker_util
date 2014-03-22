@@ -14,6 +14,7 @@ script_dir_parent=${PWD##*/}
 main() {
 	isrootuser
 
+	setup_script
 	install_packages
 	install_docker
 	set_docker_env
