@@ -3,7 +3,7 @@ then
 	true
 fi
 echo current user: ${current_user}
-if ! useradd -G docker ${current_user} 1>/dev/null
+if ! usermod -a -G docker ${current_user} 1>/dev/null
 then
 	true
 fi
