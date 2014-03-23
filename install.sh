@@ -29,19 +29,19 @@ main() {
 
 install_packages() {
 	echo ">> Install packages"
-		source conf/package-needed 1>/dev/null
+		source conf/package-needed
 	exit_func $?
 }
 
 install_docker() {
 	echo ">> Install docker"
-		source conf/install-docker 1>/dev/null
+		source conf/install-docker
 	exit_func $?
 }
 
 set_bash_completion() {
 	echo ">> Set bash completion"
-		source conf/bash-completion 1>/dev/null
+		source conf/docker-bash-completion-install
 	exit_func $?
 }
 
