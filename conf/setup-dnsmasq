@@ -11,6 +11,7 @@ EOF
 mkdir -p ${DNSMASQD}
 
 
-install -m 644 conf/dnsmasq.conf ${DNSMASQD}/
-install -m 644 conf/hosts_.lan ${DNSMASQD}/
-install -m 644 conf/hosts_.dev ${DNSMASQD}/
+install -m 644 conf/dnsmasq.conf ${DNSMASQD}
+install -m 644 conf/hosts_.lan ${DNSMASQD}
+install -m 644 conf/hosts_.dev ${DNSMASQD}
+
