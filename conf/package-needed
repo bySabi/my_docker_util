@@ -1,4 +1,4 @@
-apt-get update && apt-get upgrade -y -q --no-install-recommends && apt-get dist-upgrade -y -q --no-install-recommends
+apt-get update
 
 apt-get install -y --no-install-recommends \
 	linux-image-extra-`uname -r` \

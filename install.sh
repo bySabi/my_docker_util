@@ -9,7 +9,7 @@ project_dir="my_docker_util"
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 script_dir_parent=${PWD##*/}
-current_user=${USER}
+current_user=${SUDO_USER}
 
 main() {
 	isrootuser
