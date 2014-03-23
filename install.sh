@@ -35,7 +35,7 @@ install_packages() {
 
 install_docker() {
 	echo ">> Install docker"
-		source conf/docker-install 1>/dev/null
+		source conf/install-docker 1>/dev/null
 	exit_func $?
 }
 
