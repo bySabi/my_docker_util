@@ -1,2 +1,9 @@
-groupadd docker
+if ! groupadd docker 1>/dev/null
+then
+	if groups ${USER} | grep &>/dev/null '\bdocker\b'
+	then
+		echo "user: ${USER} already on group docker"
+		exit 0
+	fi
+fi
 gpasswd -a ${USER} docker
