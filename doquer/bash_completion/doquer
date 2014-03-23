@@ -152,7 +152,7 @@ _doquer()
 	local cur prev words cword
 	_get_comp_words_by_ref -n : cur prev words cword
 
-	local command='docker'
+	local command='doquer'
 	local counter=1
 	while [ $counter -lt $cword ]; do
 		case "${words[$counter]}" in
