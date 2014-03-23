@@ -2,6 +2,7 @@ if ! groupadd docker 1>/dev/null
 then
 	true
 fi
+ech current user: ${current_user}
 if ! gpasswd -a ${current_user} docker 1>/dev/null
 then
 	true
