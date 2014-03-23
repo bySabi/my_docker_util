@@ -245,7 +245,6 @@ case "$1" in
 		[ -d "$docker_image_dir/usr" ] && chmod 755 $docker_image_dir/usr/*
 		[ -d "$docker_image_dir/conf" ] && chmod 644 $docker_image_dir/conf/*
 		docker build \
-			-rm \
 			-t $IMAGE \
 			$docker_image_dir
 		;;
