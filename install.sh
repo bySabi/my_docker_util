@@ -20,6 +20,8 @@ main() {
 	set_docker_env
 	set_dnsmasq
 	install_pipework
+
+	## *** DON'T on production
 	add_user_to_docker_group
 }
 

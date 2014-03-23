@@ -7,45 +7,45 @@ __doquer_containers_exclude()
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-__docker_containers_all()
+__doquer_containers_all()
 {
 	local containers
 	containers="$( docker ps -a -q )"
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-__docker_containers_running()
+__doquer_containers_running()
 {
 	local containers
 	containers="$( docker ps -q )"
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-__docker_containers_running_notrunc()
+__doquer_containers_running_notrunc()
 {
 	local containers
 	containers="$( docker ps -notrunc -q )"
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-__docker_containers_stopped()
+__doquer_containers_stopped()
 {
 	local containers
 	containers="$( comm -13 <(docker ps -q | sort -u) <(docker ps -a -q | sort -u) )"
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-_docker_lock()
+_doquer_lock()
 {
-	__docker_containers_all
+	__doquer_containers_all
 }
 
-_docker_unlock()
+_doquer_unlock()
 {
 	__doquer_containers_exclude
 }
 
-_docker_rmall()
+_doquer_rmall()
 {
 	case "$cur" in
 		*)
@@ -54,27 +54,27 @@ _docker_rmall()
 	esac
 }
 
-_docker_rmiall()
+_doquer_rmiall()
 {
 	return
 }
 
-_docker_integrity()
+_doquer_integrity()
 {
 	return
 }
 
-_docker_build()
+_doquer_build()
 {
 	_filedir
 }
 
-_docker_cleanbuild()
+_doquer_cleanbuild()
 {
 	_filedir
 }
 
-_docker_run()
+_doquer_run()
 {
 	case "$cur" in
 		*)
@@ -83,7 +83,7 @@ _docker_run()
 	esac
 }
 
-_docker_runtmp()
+_doquer_runtmp()
 {
 	case "$cur" in
 		*)
@@ -92,17 +92,17 @@ _docker_runtmp()
 	esac
 }
 
-_docker_conf()
+_doquer_conf()
 {
 	_filedir
 }
 
-_docker_attach()
+_doquer_attach()
 {
-	__docker_containers_running_notrunc
+	__doquer_containers_running_notrunc
 }
 
-_docker_show()
+_doquer_show()
 {
 	case "$cur" in
 		*)
@@ -111,7 +111,7 @@ _docker_show()
 	esac
 }
 
-_docker_version()
+_doquer_version()
 {
 	return
 }
@@ -119,7 +119,7 @@ _docker_version()
 
 _doquer()
 {
-	local cur prev words cword command="docker" counter=1 word cpos
+	local cur prev words cword command="doquer" counter=1 word cpos
 	local commands="
 			lock
 			unlock
@@ -157,7 +157,7 @@ _doquer()
 		(( counter++ ))
 	done
 
-	local completions_func=_docker_${command}
+	local completions_func=_doquer_${command}
 	declare -F $completions_func >/dev/null && $completions_func
 
 	return 0
