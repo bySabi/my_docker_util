@@ -9,7 +9,7 @@ project_dir="my_docker_util"
 cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 script_dir_parent=${PWD##*/}
-
+current_user=${USER}
 
 main() {
 	isrootuser
@@ -43,7 +43,7 @@ set_docker_env() {
 }
 
 set_dnsmasq() {
-	echo ">> Set dnsmasq"
+	echo ">> Setup dnsmasq"
 		source conf/setup-dnsmasq
 	exit_func $?
 }
@@ -55,7 +55,7 @@ install_pipework() {
 }
 
 add_user_to_docker_group() {
-	echo ">> Add user: ${USER} to docker group"
+	echo ">> Add user: ${current_user} to docker group"
 		source conf/add-user-group-docker
 	exit_func $?
 }
