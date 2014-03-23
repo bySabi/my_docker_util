@@ -1,0 +1,2 @@
+groupadd docker
+gpasswd -a ${USER} docker

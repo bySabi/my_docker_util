@@ -20,6 +20,7 @@ main() {
 	set_docker_env
 	set_dnsmasq
 	install_pipework
+	add_user_to_docker_group
 }
 
 
@@ -50,6 +51,12 @@ set_dnsmasq() {
 install_pipework() {
 	echo ">> Install pipework"
 		source conf/install-pipework
+	exit_func $?
+}
+
+add_user_to_docker_group() {
+	echo ">> Add user: ${USER} to docker group"
+		source conf/add-user-group-docker
 	exit_func $?
 }
 
