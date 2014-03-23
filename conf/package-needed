@@ -2,4 +2,6 @@ apt-get update
 
 apt-get install -y --no-install-recommends \
 	linux-image-extra-`uname -r` \
-	dnsmasq
+	dnsmasq \
+	apparmor cgroup-lite
+
