@@ -17,6 +17,7 @@ main() {
 
 	install_packages
 	install_docker
+	set_bash_completion
 	set_docker_env
 	set_dnsmasq
 	install_pipework
@@ -35,6 +36,12 @@ install_packages() {
 install_docker() {
 	echo ">> Install docker"
 		source conf/docker-install 1>/dev/null
+	exit_func $?
+}
+
+set_bash_completion() {
+	echo ">> Set bash completion"
+		source conf/bash-completion 1>/dev/null
 	exit_func $?
 }
 

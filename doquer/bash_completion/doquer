@@ -1,4 +1,17 @@
+#!bash
+#
+# To enable the completions either:
+#  - place this file in /etc/bash_completion.d
+#  or
+#  - copy this file and add the line below to your .bashrc after
+#    bash completion features are loaded
+#     . doquer.bash
+#
 ## ripped from docker bash completion
+
+__doquer_q() {
+	doquer 2>/dev/null "$@"
+}
 
 __doquer_containers_exclude()
 {
@@ -119,7 +132,6 @@ _doquer_version()
 
 _doquer()
 {
-	local cur prev words cword command="doquer" counter=1 word cpos
 	local commands="
 			lock
 			unlock
@@ -137,23 +149,25 @@ _doquer()
 	 "
 
 	COMPREPLY=()
+	local cur prev words cword
 	_get_comp_words_by_ref -n : cur prev words cword
 
+	local command='docker'
+	local counter=1
 	while [ $counter -lt $cword ]; do
-		word="${words[$counter]}"
-			case "$word" in
-				-H)
-					(( counter++ ))
-					;;
-				-*)
-					;;
-				*)
-					command="$word"
-					cpos=$counter
-					(( cpos++ ))
-					break
-					;;
-			esac
+		case "${words[$counter]}" in
+			-H)
+				(( counter++ ))
+				;;
+			-*)
+				;;
+			*)
+				command="${words[$counter]}"
+				cpos=$counter
+				(( cpos++ ))
+				break
+				;;
+		esac
 		(( counter++ ))
 	done
 

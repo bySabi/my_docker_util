@@ -1,0 +1,4 @@
+#!/bin/bash
+
+curl -o /etc/bash_completion.d/docker https://raw.githubusercontent.com/dotcloud/docker/master/contrib/completion/bash/docker
+chmod 644 /etc/bash_completion.d/docker
