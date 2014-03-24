@@ -293,6 +293,7 @@ case "$1" in
 		fi
 		contid=$(docker run \
 			-d \
+			-t \
 			$ENV \
 			$HOST_NAME \
 			$CONT_NAME \
