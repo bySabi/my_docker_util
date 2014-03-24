@@ -282,7 +282,7 @@ case "$1" in
 			bridge=$(echo "$ENV" | grep -Po 'BRIDGED=([^\s]*)')
 			[ "$bridge" ] && {
 				export $bridge
-				PORT=""
+				#PORT=""
 			}
 		else
 			ENV=$(echo "$ENV" | perl -pe 's/BRIDGED=.*?\s/BRIDGED= /')
@@ -301,7 +301,7 @@ case "$1" in
 			$VOLUME \
 			$IMAGE \
 			$RUN_COMMAND)
-		[ $pipeflag ] && [ "$BRIDGED" ] && pipework br0 $contid "$BRIDGED"
+		[ $pipeflag ] && [ "$BRIDGED" ] && pipework docker0 $contid "$BRIDGED"
 		echo  $contid
 		;;
 	runtmp)
