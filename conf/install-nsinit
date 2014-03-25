@@ -1,4 +1,4 @@
 #!/bin/bash
 
-wget -O /usr/local/bin/nsinit https://raw.githubusercontent.com/bySabi/my_docker_util/master/conf
+wget -O /usr/local/bin/nsinit https://raw.githubusercontent.com/bySabi/my_docker_util/master/conf/nsinit
 chmod a+x /usr/local/bin/nsinit

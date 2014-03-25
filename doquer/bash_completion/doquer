@@ -30,13 +30,6 @@ __doquer_containers_running()
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
-__doquer_containers_running_notrunc()
-{
-	local containers
-	containers="$( docker ps -notrunc -q )"
-	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
-}
-
 __doquer_containers_stopped()
 {
 	local containers
@@ -108,7 +101,7 @@ _doquer_conf()
 
 _doquer_attach()
 {
-	__doquer_containers_running_notrunc
+	__doquer_containers_running
 }
 
 _doquer_show()

@@ -16,6 +16,8 @@ ATTACH_COMMAND=
 
 DOQUER_LOCK_FILE=/var/lib/doquer/doquer_containers
 
+DOCKER_EXECDRIVE_DIR=/var/lib/docker/execdriver/native
+
 # Capture grep exit code
 #  0 match string
 #  1 not match string
@@ -350,11 +352,19 @@ case "$1" in
 		isrootuser
 		contid=$2
 		shift
-		set_docker_vars "${*:2}"
-		lxc-attach -n $contid $ATTACH_COMMAND
+		#set_docker_vars "${*:2}"
+		contid=$(docker inspect --format='{{.ID}}' $contid)
+		if [ -d $DOCKER_EXECDRIVE_DIR/$contid ]
+		then
+			cd $DOCKER_EXECDRIVE_DIR/$contid
+			nsinit exec ${*:2}
+		else
+			echo "Not running container"
+			exit 1
+		fi	
 		;;
 	version)
-		echo "VERSION 0.5 __ bySabi"
+		echo "VERSION 0.6 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
