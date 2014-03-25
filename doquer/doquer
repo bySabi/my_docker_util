@@ -357,7 +357,9 @@ case "$1" in
 		if [ -d $DOCKER_EXECDRIVE_DIR/$contid ]
 		then
 			cd $DOCKER_EXECDRIVE_DIR/$contid
-			nsinit exec ${*:2}
+			nsinit_args=${*:2}
+			[ ${nsinit_args} ] || nsinit_args="bash"
+			nsinit exec ${nsinit_args}
 		else
 			echo "Not running container"
 			exit 1
