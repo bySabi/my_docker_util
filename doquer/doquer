@@ -247,6 +247,7 @@ case "$1" in
 		[ -d "$docker_image_dir/usr" ] && chmod 755 $docker_image_dir/usr/*
 		[ -d "$docker_image_dir/conf" ] && chmod 644 $docker_image_dir/conf/*
 		docker build \
+			--rm \ 
 			-t $IMAGE \
 			$docker_image_dir
 		;;
@@ -284,7 +285,7 @@ case "$1" in
 			bridge=$(echo "$ENV" | grep -Po 'BRIDGED=([^\s]*)')
 			[ "$bridge" ] && {
 				export $bridge
-				#PORT=""
+				PORT=""
 			}
 		else
 			ENV=$(echo "$ENV" | perl -pe 's/BRIDGED=.*?\s/BRIDGED= /')
@@ -303,7 +304,7 @@ case "$1" in
 			$VOLUME \
 			$IMAGE \
 			$RUN_COMMAND)
-		[ $pipeflag ] && [ "$BRIDGED" ] && pipework docker0 $contid "$BRIDGED"
+		[ $pipeflag ] && [ "$BRIDGED" ] && pipework br0 $contid "$BRIDGED"
 		echo  $contid
 		;;
 	runtmp)
@@ -318,7 +319,7 @@ case "$1" in
 		fi
 		set_docker_vars "${*:2}"
 		docker run \
-			-rm -t -i \
+			--rm -t -i \
 			$ENV \
 			$HOST_NAME \
 			$CONT_NAME \

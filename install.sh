@@ -15,6 +15,7 @@ main() {
 	isrootuser
 	setup_script ${script_dir_parent}
 
+	set_network_interface
 	install_packages
 	install_docker
 	set_bash_completion
@@ -26,6 +27,12 @@ main() {
 	add_user_to_docker_group
 }
 
+set_network_interface() {
+	echo ">> Install custom network interface-bridge"
+		install -o root -m 644 conf/interfaces-bridge /etc/network/interfaces
+		echo -e "Default IP: \e[00;5m192.168.0.199\e[00m ... change before restart"
+	exit_func $?
+}
 
 install_packages() {
 	echo ">> Install packages"
