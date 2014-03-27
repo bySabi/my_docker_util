@@ -20,6 +20,7 @@ main() {
 	install_docker
 	set_bash_completion
 	set_docker_env
+	create_joquer_user
 	set_dnsmasq
 	install_pipework
 
@@ -55,6 +56,12 @@ set_bash_completion() {
 set_docker_env() {
 	echo ">> Set docker environment"
 		source conf/set-docker-env
+	exit_func $?
+}
+
+create_joquer_user() {
+	echo ">> Create \"joquer\" user"
+		useradd -M -U -G docker -s /bin/false -u 7777 joquer
 	exit_func $?
 }
 

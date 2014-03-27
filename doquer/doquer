@@ -22,7 +22,7 @@ DOCKER_EXECDRIVE_DIR=/var/lib/docker/execdriver/native
 #  0 match string
 #  1 not match string
 islocked() {
-	grep -q $1 $DOQUER_LOCK_FILE
+	grep -q $1 ${DOQUER_LOCK_FILE}
 	return $?
 }
 
@@ -40,7 +40,7 @@ isuntaggedimage() {
 
 removefromlist() {
 	# Delete match pattern /pattern/d
-	sed -i "/$1/d" $DOQUER_LOCK_FILE
+	sed -i "/$1/d" ${DOQUER_LOCK_FILE}
 }
 
 set_docker_vars() {
@@ -49,15 +49,15 @@ set_docker_vars() {
 
 	if [[ -d "$1" ]]; then
 		#is a directory
-		DOCKER_RUN_CONF=$(dirname ${1})/$DOCKER_RUN_CONF
+		DOCKER_RUN_CONF=$(dirname ${1})/${DOCKER_RUN_CONF}
 		shift
 	elif [[ -f "$1" ]]; then
 		#is a file
 		DOCKER_RUN_CONF="$1"
 		shift
 	fi
-	[ -f "$DOCKER_RUN_CONF" ] && source $DOCKER_RUN_CONF
-	echo "${*:1}" > $tmp_arg && source $tmp_arg
+	[ -f ${DOCKER_RUN_CONF} ] && source ${DOCKER_RUN_CONF}
+	echo "${*:1}" > ${tmp_arg} && source ${tmp_arg}
 }
 
 isrootuser(){
@@ -176,7 +176,7 @@ case "$1" in
 			echo "$2 -- already locked."
 			exit 1
 		}
-		echo "$2" >> $DOQUER_LOCK_FILE
+		echo "$2" >> ${DOQUER_LOCK_FILE}
 		;;
 	unlock)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -196,9 +196,9 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "-f" ]; then
-			docker stop $( docker ps -q | grep -v -f $DOQUER_LOCK_FILE )
+			docker stop $( docker ps -q | grep -v -f ${DOQUER_LOCK_FILE} )
 		fi
-		docker rm $( docker ps -a -q | grep -v -f $DOQUER_LOCK_FILE )
+		docker rm $( docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE} )
 		;;
 	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -206,7 +206,7 @@ case "$1" in
 			exit 1
 		fi
 		allimages=$( docker images -q )
-		for cont in $allimages
+		for cont in ${allimages}
 		do
 			if isuntaggedimage  ${cont}; then
 				docker rmi ${cont}
@@ -218,8 +218,8 @@ case "$1" in
 			help_integrity
 			exit 1
 		fi
-		contexclude=$( cat $DOQUER_LOCK_FILE )
-		for cont in $contexclude
+		contexclude=$( cat ${DOQUER_LOCK_FILE} )
+		for cont in ${contexclude}
 		do
 			if ! isexistcontainer ${cont}; then
 				removefromlist 
@@ -232,9 +232,9 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "-q" ]; then
-			cat $DOQUER_LOCK_FILE
+			cat ${DOQUER_LOCK_FILE}
 		else
-			docker ps -a | grep -e "IMAGE" -f $DOQUER_LOCK_FILE
+			docker ps -a | grep -e "IMAGE" -f ${DOQUER_LOCK_FILE}
 		fi
 		;;
 	build)
@@ -244,12 +244,12 @@ case "$1" in
 		fi
 		set_docker_vars "${*:2}"
 		docker_image_dir=$(dirname ${DOCKER_RUN_CONF})
-		[ -d "$docker_image_dir/usr" ] && chmod 755 $docker_image_dir/usr/*
-		[ -d "$docker_image_dir/conf" ] && chmod 644 $docker_image_dir/conf/*
+		[ -d ${docker_image_dir}/usr ] && chmod 755 ${docker_image_dir}/usr/*
+		[ -d ${docker_image_dir}/conf ] && chmod 644 ${docker_image_dir}/conf/*
 		docker build \
 			--rm \
-			-t $IMAGE \
-			$docker_image_dir
+			-t ${IMAGE} \
+			${docker_image_dir}
 		;;
 	cleanbuild)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -265,9 +265,9 @@ case "$1" in
 			fi
 		fi
 		doquer rmiall
-		if docker rmi $IMAGE
+		if docker rmi ${IMAGE}
 		then
-			echo Deleted: $IMAGE
+			echo Deleted: ${IMAGE}
 		fi
 		;;
 	run)
@@ -276,36 +276,41 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "--pipe" ] ; then
-			isrootuser
 			pipeflag=1
 			shift
 		fi
 		set_docker_vars "${*:2}"
-		if [ $pipeflag ] ; then
-			bridge=$(echo "$ENV" | grep -Po 'BRIDGED=([^\s]*)')
-			[ "$bridge" ] && {
-				export $bridge
+		if [ ${pipeflag} ] ; then
+			bridge=$(echo ${ENV} | grep -Po 'BRIDGED=([^\s]*)')
+			[ ${bridge} ] && {
+				export ${bridge}
 				PORT=""
 			}
 		else
-			ENV=$(echo "$ENV" | perl -pe 's/BRIDGED=.*?\s/BRIDGED= /')
+			ENV=$(echo ${ENV} | perl -pe 's/BRIDGED=.*?\s/BRIDGED= /')
 		fi
-		if ! docker inspect $IMAGE 1>/dev/null 2>&1
+		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1
 		then
 			doquer build
 		fi
 		contid=$(docker run \
 			-d \
 			-t \
-			$ENV \
-			$HOST_NAME \
-			$CONT_NAME \
-			$PORT \
-			$VOLUME \
-			$IMAGE \
-			$RUN_COMMAND)
-		[ $pipeflag ] && [ "$BRIDGED" ] && pipework br0 $contid "$BRIDGED"
-		echo  $contid
+			${ENV} \
+			${HOST_NAME} \
+			${CONT_NAME} \
+			${PORT} \
+			${VOLUME} \
+			${IMAGE} \
+			${RUN_COMMAND})
+		
+		[ ${pipeflag} ] && [ ${BRIDGED} ] && {
+			if sudo pipework br0 ${contid} ${BRIDGED}
+			then
+				true
+			fi
+		}
+		echo  ${contid}
 		;;
 	runtmp)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -313,20 +318,20 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "--pipe" ] ; then
-			isrootuser
+			#isrootuser
 			pipeflag=1
 			shift
 		fi
 		set_docker_vars "${*:2}"
 		docker run \
 			--rm -t -i \
-			$ENV \
-			$HOST_NAME \
-			$CONT_NAME \
-			$PORT \
-			$VOLUME \
-			$IMAGE \
-			$RUNTMP_COMMAND
+			${ENV} \
+			${HOST_NAME} \
+			${CONT_NAME} \
+			${PORT} \
+			${VOLUME} \
+			${IMAGE} \
+			${RUNTMP_COMMAND}
 		;;
 	conf)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -334,16 +339,16 @@ case "$1" in
 			exit 1
 		fi
 		set_docker_vars "${*:2}"
-		echo "PORT=$PORT"
-		echo "VOLUME=$VOLUME"
-		echo "ENV=$ENV"
-		echo "IMAGE=$IMAGE"
-		echo "HOST_NAME=$HOST_NAME"
-		echo "CONT_NAME=$CONT_NAME"
-		echo "DOCKER_RUN_CONF=$DOCKER_RUN_CONF"
-		echo "RUN_COMMAND=$RUN_COMMAND"
-		echo "RUNTMP_COMMAND=$RUNTMP_COMMAND"
-		echo "ATTACH_COMMAND=$ATTACH_COMMAND"
+		echo "PORT=${PORT}"
+		echo "VOLUME=${VOLUME}"
+		echo "ENV=${ENV}"
+		echo "IMAGE=${IMAGE}"
+		echo "HOST_NAME=${HOST_NAME}"
+		echo "CONT_NAME=${CONT_NAME}"
+		echo "DOCKER_RUN_CONF=${DOCKER_RUN_CONF}"
+		echo "RUN_COMMAND=${RUN_COMMAND}"
+		echo "RUNTMP_COMMAND=${RUNTMP_COMMAND}"
+		echo "ATTACH_COMMAND=${ATTACH_COMMAND}"
 		;;
 	attach)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -351,13 +356,13 @@ case "$1" in
 			exit 1
 		fi
 		isrootuser
-		contid=$2
+		contid=${2}
 		shift
 		#set_docker_vars "${*:2}"
-		contid=$(docker inspect --format='{{.ID}}' $contid)
-		if [ -d $DOCKER_EXECDRIVE_DIR/$contid ]
+		contid=$(docker inspect --format='{{.ID}}' ${contid})
+		if [ -d ${DOCKER_EXECDRIVE_DIR}/${contid} ]
 		then
-			cd $DOCKER_EXECDRIVE_DIR/$contid
+			cd ${DOCKER_EXECDRIVE_DIR}/${contid}
 			nsinit_args=${*:2}
 			[ ${nsinit_args} ] || nsinit_args="bash"
 			nsinit exec ${nsinit_args}
@@ -367,7 +372,7 @@ case "$1" in
 		fi	
 		;;
 	version)
-		echo "VERSION 0.6 __ bySabi"
+		echo "VERSION 0.7 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
