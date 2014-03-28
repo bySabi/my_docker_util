@@ -11,21 +11,25 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 script_dir_parent=${PWD##*/}
 current_user=${SUDO_USER}
 
+[ ${INSTALLTYPE} ] || INSTALLTYPE=develop
+
 main() {
 	isrootuser
 	setup_script ${script_dir_parent}
 
-	set_network_interface
 	install_packages
 	install_docker
 	set_bash_completion
 	set_docker_env
 	create_joquer_user
 	set_dnsmasq
-	install_pipework
-
 	## *** DON'T on production
-	add_user_to_docker_group
+	[ ${INSTALLTYPE} == 'develop' ] && {
+		set_docker_limit
+		set_network_interface
+		install_pipework
+		add_user_to_docker_group
+	}
 }
 
 set_network_interface() {
@@ -56,6 +60,12 @@ set_bash_completion() {
 set_docker_env() {
 	echo ">> Set docker environment"
 		source conf/set-docker-env
+	exit_func $?
+}
+
+set_docker_limit() {
+	echo ">> Set docker limit"
+		source conf/set-docker-limit
 	exit_func $?
 }
 
