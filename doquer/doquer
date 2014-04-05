@@ -18,30 +18,6 @@ DOQUER_LOCK_FILE=/var/lib/doquer/doquer_containers
 
 DOCKER_EXECDRIVE_DIR=/var/lib/docker/execdriver/native
 
-# Capture grep exit code
-#  0 match string
-#  1 not match string
-islocked() {
-	grep -q $1 ${DOQUER_LOCK_FILE}
-	return $?
-}
-
-# 0 exist
-# n not exist or error
-isexistcontainer() {
-	docker inspect "$1" 1>/dev/null
-	return $?
-}
-
-isuntaggedimage() {
-	docker images | grep '<none>' |grep $1 1>/dev/null
-	return $?
-}
-
-removefromlist() {
-	# Delete match pattern /pattern/d
-	sed -i "/$1/d" ${DOQUER_LOCK_FILE}
-}
 
 set_docker_vars() {
 
@@ -171,23 +147,25 @@ case "$1" in
 			help_lock
 			exit 1
 		fi
-		[ isexistcontainer "$2" ] || exit 1
-		[ islocked "$2" ] && { 
-			echo "$2 -- already locked."
+		if ! docker inspect ${2} 1>/dev/null 2>&1; then exit 1; fi
+		# container is locked?
+		if grep -q ${2} ${DOQUER_LOCK_FILE}; then
+			echo "${2} -- already locked."
 			exit 1
-		}
-		echo "$2" >> ${DOQUER_LOCK_FILE}
+		fi
+		echo "${2}" >> ${DOQUER_LOCK_FILE}
 		;;
 	unlock)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_unlock
 			exit 1
 		fi
-		if islocked "$2"; then
-			removefromlist "$2"
+		if grep -q ${2} ${DOQUER_LOCK_FILE}; then
+			# removefromlist
+			sed -i "/$2/d" ${DOQUER_LOCK_FILE}
 		else
-			echo "$2  -- isn´t on locked list."
-		  	exit 1
+			echo "${2}  -- isn´t on locked list."
+			exit 1
 		fi
 		;;
 	rmall)
@@ -208,8 +186,9 @@ case "$1" in
 		allimages=$( docker images -q )
 		for cont in ${allimages}
 		do
-			if isuntaggedimage  ${cont}; then
-				docker rmi ${cont}
+			# is untagged image?
+			if docker images | grep '<none>' |grep ${cont} 1>/dev/null 2>&1; then
+				docker rmi -f ${cont}
 			fi
 		done
 		;;
@@ -221,8 +200,9 @@ case "$1" in
 		contexclude=$( cat ${DOQUER_LOCK_FILE} )
 		for cont in ${contexclude}
 		do
-			if ! isexistcontainer ${cont}; then
-				removefromlist 
+			if ! docker inspect ${cont} 1>/dev/null 2>&1; then
+				# removefromlist
+				sed -i "/${cont}/d" ${DOQUER_LOCK_FILE}
 			fi
 		done
 		;;
@@ -259,13 +239,13 @@ case "$1" in
 		set_docker_vars "${*:2}"
 		if ! doquer rmall -f 2>/dev/null
 		then
-			if ! doquer rmall f 2>/dev/null
+			if ! doquer rmall -f 2>/dev/null
 			then 
 				true
 			fi
 		fi
 		doquer rmiall
-		if docker rmi ${IMAGE}
+		if docker rmi -f ${IMAGE}
 		then
 			echo Deleted: ${IMAGE}
 		fi
@@ -372,7 +352,7 @@ case "$1" in
 		fi	
 		;;
 	version)
-		echo "VERSION 0.7 __ bySabi"
+		echo "VERSION 0.8 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"

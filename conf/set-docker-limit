@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if ! grep "#bySabi" /etc/init.d/docker >/dev/null
+if ! grep "#bySabi" /etc/init/docker.conf >/dev/null
 then
-	perl -pe 's/case \"\$1\" in/#bySabi\nlimit nofile 65536 65536\n\n case \"\$1\" in/' -i /etc/init.d/docker
+	perl -pe 's/^script/#bySabi\nlimit nofile 65536 65536\n\nscript/' -i /etc/init/docker.conf
 fi
