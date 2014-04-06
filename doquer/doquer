@@ -174,9 +174,11 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "-f" ]; then
-			docker stop $( docker ps -q | grep -v -f ${DOQUER_LOCK_FILE} )
+			running=$( docker ps -q | grep -v -f ${DOQUER_LOCK_FILE} )
+			[ ${running} ] && docker stop ${running} 
 		fi
-		docker rm $( docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE} )
+		allcontainers=$( docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE} )
+		[ ${allcontainers} ] && docker rm ${allcontainers}
 		;;
 	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -187,7 +189,7 @@ case "$1" in
 		for cont in ${allimages}
 		do
 			# is untagged image?
-			if docker images | grep '<none>' |grep ${cont} 1>/dev/null 2>&1; then
+			if docker images | grep '<none>' | grep ${cont} 1>/dev/null 2>&1; then
 				docker rmi -f ${cont}
 			fi
 		done
@@ -239,15 +241,16 @@ case "$1" in
 		set_docker_vars "${*:2}"
 		if ! doquer rmall -f 2>/dev/null
 		then
-			if ! doquer rmall -f 2>/dev/null
+			if ! doquer rmall 2>/dev/null
 			then 
 				true
 			fi
 		fi
 		doquer rmiall
-		if docker rmi -f ${IMAGE}
-		then
-			echo Deleted: ${IMAGE}
+		if docker inspect ${IMAGE} 1>/dev/null 2>&1; then
+			if docker rmi -f ${IMAGE}; then
+				echo Deleted: ${IMAGE}
+			fi
 		fi
 		;;
 	run)
