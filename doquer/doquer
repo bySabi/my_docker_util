@@ -175,10 +175,10 @@ case "$1" in
 		fi
 		if [ "$2" == "-f" ]; then
 			running=$( docker ps -q | grep -v -f ${DOQUER_LOCK_FILE} )
-			[ ${running} ] && docker stop ${running} 
+			[ ${#running[@]} -ne 0 ] && docker stop ${running} 
 		fi
 		allcontainers=$( docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE} )
-		[ ${allcontainers} ] && docker rm ${allcontainers}
+		[ ${#allcontainers[@]} -ne 0 ] && docker rm ${allcontainers}
 		;;
 	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -336,6 +336,11 @@ case "$1" in
 	attach)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_attach
+			exit 1
+		fi
+		if ! which nsinit > /dev/null
+		then
+			echo "\"nsinit\" tool needed, download from: https://github.com/bySabi/my_docker_util/raw/master/conf/nsinit"
 			exit 1
 		fi
 		isrootuser
