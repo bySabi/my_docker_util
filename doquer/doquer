@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e
 
 
 PORT=
+DNS=
 VOLUME=
 ENV=
 IMAGE=
@@ -140,6 +140,12 @@ help_attach() {
 	echo
 }
 
+help_start() {
+	echo "Usage: doquer start CONTAINER"
+	echo
+	echo "Start a stopped container"
+	echo
+}
 
 case "$1" in
 	lock)
@@ -226,8 +232,8 @@ case "$1" in
 		fi
 		set_docker_vars "${*:2}"
 		docker_image_dir=$(dirname ${DOCKER_RUN_CONF})
-		[ -d ${docker_image_dir}/usr ] && chmod 755 ${docker_image_dir}/usr/*
-		[ -d ${docker_image_dir}/conf ] && chmod 644 ${docker_image_dir}/conf/*
+		[ "$(ls -A ${docker_image_dir}/usr 2>/dev/null)" ] && chmod 755 ${docker_image_dir}/usr/*
+		[ "$(ls -A ${docker_image_dir}/conf 2>/dev/null)" ] && chmod 644 ${docker_image_dir}/conf/*
 		docker build \
 			--rm \
 			-t ${IMAGE} \
@@ -266,7 +272,8 @@ case "$1" in
 		if [ ${pipeflag} ] ; then
 			bridge=$(echo ${ENV} | grep -Po 'BRIDGED=([^\s]*)')
 			[ ${bridge} ] && {
-				export ${bridge}
+				# remove "BRIDGED="" string
+				bridge="${bridge#BRIDGED=}"
 				PORT=""
 			}
 		else
@@ -283,12 +290,13 @@ case "$1" in
 			${HOST_NAME} \
 			${CONT_NAME} \
 			${PORT} \
+			${DNS} \
 			${VOLUME} \
 			${IMAGE} \
 			${RUN_COMMAND})
 		
-		[ ${pipeflag} ] && [ ${BRIDGED} ] && {
-			if sudo pipework br0 ${contid} ${BRIDGED}
+		[ ${pipeflag} ] && [ ${bridge} ] && {
+			if sudo pipework br0 ${contid} ${bridge}
 			then
 				true
 			fi
@@ -312,6 +320,7 @@ case "$1" in
 			${HOST_NAME} \
 			${CONT_NAME} \
 			${PORT} \
+			${DNS} \
 			${VOLUME} \
 			${IMAGE} \
 			${RUNTMP_COMMAND}
@@ -323,6 +332,7 @@ case "$1" in
 		fi
 		set_docker_vars "${*:2}"
 		echo "PORT=${PORT}"
+		echo "DNS=${DNS}"
 		echo "VOLUME=${VOLUME}"
 		echo "ENV=${ENV}"
 		echo "IMAGE=${IMAGE}"
@@ -359,8 +369,25 @@ case "$1" in
 			exit 1
 		fi	
 		;;
+	start)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+			help_start
+			exit 1
+		fi
+		docker start ${2}
+		bridge=$(docker inspect --format='{{.Config.Env}}' ${2} | grep -Po 'BRIDGED=([^\s]*)')
+		[ ${bridge} ] && {
+			bridge="${bridge#BRIDGED=}"
+			[ ${bridge} ] && {
+				if sudo pipework br0 ${2} ${bridge}
+				then 
+					true
+				fi
+			}
+		}
+		;;
 	version)
-		echo "VERSION 0.8 __ bySabi"
+		echo "VERSION 0.10 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
@@ -379,6 +406,7 @@ case "$1" in
 		echo "	run		Run a background container from a configuration file"
 		echo "	runtmp		Run a temporal container from a configuration file"
 		echo "	conf		Get configuration file"
+		echo "	start		Start a stopped container"
 		echo "	attach		Attach to a running container"
 		echo "	version		Display version"
 		echo

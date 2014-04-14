@@ -25,10 +25,11 @@ main() {
 	set_dnsmasq
 	## *** DON'T on production
 	[ ${INSTALLTYPE} == 'develop' ] && {
-		set_docker_limit
+		#set_docker_limit
 		set_network_interface
 		install_pipework
 		add_user_to_docker_group
+		set_inotify_max
 	}
 }
 
@@ -90,6 +91,12 @@ install_pipework() {
 add_user_to_docker_group() {
 	echo ">> Add user: ${current_user} to docker group"
 		source conf/add-user-group-docker
+	exit_func $?
+}
+
+set_inotify_max() {
+	echo ">> Set inotiy sysctl max"
+		source conf/set-inotify-max
 	exit_func $?
 }
 

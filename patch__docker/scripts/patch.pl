@@ -8,7 +8,7 @@ use Patch;  # import default list of items.
 set_TMPDIR( $TMPDIR ) ;
 
 ## docker
-print "docker rw hosts file stupied patching __ bySabi\n";
+print "docker rw hosts resolv file´s stupied patching __ bySabi\n";
 print "-----------------------------------------------\n\n";
 
 set_filepath ( $path_target );

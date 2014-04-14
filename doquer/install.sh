@@ -3,6 +3,8 @@ set -e
 
 INSTALLDIR=/usr/local/bin
 DATADIR=/var/lib/doquer
+SRC="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 
 isrootuser(){
 	if ! [ $(id -u) = 0 ]; then
@@ -13,8 +15,8 @@ isrootuser(){
 
 isrootuser
 
-install -o root -m 755 doquer $INSTALLDIR
-install -o root -m 644 bash_completion/doquer /etc/bash_completion.d/
+install -o root -m 755 ${SRC}/doquer $INSTALLDIR
+install -o root -m 644 ${SRC}/bash_completion/doquer /etc/bash_completion.d/
 
 mkdir -p $DATADIR
 chmod -R 0777 $DATADIR
