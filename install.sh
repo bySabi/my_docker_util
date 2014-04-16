@@ -22,7 +22,7 @@ main() {
 	set_bash_completion
 	set_docker_env
 	create_joquer_user
-	set_dnsmasq
+	#set_dnsmasq
 	## *** DON'T on production
 	[ ${INSTALLTYPE} == 'develop' ] && {
 		#set_docker_limit
