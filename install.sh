@@ -18,7 +18,7 @@ main() {
 	setup_script ${script_dir_parent}
 
 	install_packages
-	install_docker
+#	install_docker
 	set_bash_completion
 	set_docker_env
 	create_joquer_user
