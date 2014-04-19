@@ -1,6 +1,6 @@
 apt-get update 1>/dev/null
 
-apt-get install -y --no-install-recommends \
+apt-get install -y \
 	linux-image-extra-`uname -r` \
 	dnsmasq-base dnsutils bridge-utils \
 	apparmor cgroup-lite
