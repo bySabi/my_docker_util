@@ -1,0 +1,2 @@
+echo -e "\n" >> /etc/default/docker
+echo 'DOCKER_OPTS="-s btrfs"' >> /etc/default/docker

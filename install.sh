@@ -19,6 +19,7 @@ main() {
 
 	install_packages
 	install_docker
+	set_docker_default
 	set_bash_completion
 	set_docker_env
 	create_joquer_user
@@ -43,6 +44,12 @@ set_network_interface() {
 install_packages() {
 	echo ">> Install packages"
 		source conf/package-needed
+	exit_func $?
+}
+
+set_docker_default() {
+	echo ">> Set docker DEFAULT"
+		source conf/set-docker-default
 	exit_func $?
 }
 
