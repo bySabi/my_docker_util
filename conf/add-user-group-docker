@@ -1,9 +1,4 @@
-if ! groupadd docker 1>/dev/null
-then
-	true
-fi
 if ! usermod -a -G docker ${current_user} 1>/dev/null
 then
 	true
 fi
-
