@@ -19,6 +19,9 @@ install -o root -m 755 ${SRC}/doquer $INSTALLDIR
 install -o root -m 644 ${SRC}/bash_completion/doquer /etc/bash_completion.d/
 
 mkdir -p $DATADIR
-chmod -R 0777 $DATADIR
 touch $DATADIR/doquer_containers
+chown root:docker $DATADIR/* && chmod 664 $DATADIR/*
+
+
+
 
