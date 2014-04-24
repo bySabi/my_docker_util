@@ -19,7 +19,7 @@ main() {
 
 	install_packages
 	install_docker
-	set_docker_default
+	#set_docker_default
 	set_bash_completion
 	set_docker_env
 	create_joquer_user
