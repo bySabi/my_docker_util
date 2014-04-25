@@ -153,22 +153,28 @@ case "$1" in
 			help_lock
 			exit 1
 		fi
-		if ! docker inspect ${2} 1>/dev/null 2>&1; then exit 1; fi
+		contid=$(docker inspect --format='{{.ID}}' ${2})
+		[ "$?" -ne 0 ] && exit 1
+		# extrac first 12 from container ID
+		contid=${contid:0:12}
 		# container is locked?
-		if grep -q ${2} ${DOQUER_LOCK_FILE}; then
+		if grep -q ${contid} ${DOQUER_LOCK_FILE}; then
 			echo "${2} -- already locked."
 			exit 1
 		fi
-		echo "${2}" >> ${DOQUER_LOCK_FILE}
+		echo "${contid}" >> ${DOQUER_LOCK_FILE}
 		;;
 	unlock)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_unlock
 			exit 1
 		fi
-		if grep -q ${2} ${DOQUER_LOCK_FILE}; then
+		contid=$(docker inspect --format='{{.ID}}' ${2})
+		[ "$?" -ne 0 ] && exit 1
+		contid=${contid:0:12}
+		if grep -q ${contid} ${DOQUER_LOCK_FILE}; then
 			# removefromlist
-			sed -i "/$2/d" ${DOQUER_LOCK_FILE}
+			sed -i "/${contid}/d" ${DOQUER_LOCK_FILE}
 		else
 			echo "${2}  -- isn´t on locked list."
 			exit 1
