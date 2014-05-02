@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#set -x
 
 PORT=
 DNS=
@@ -276,14 +276,14 @@ case "$1" in
 		fi
 		set_docker_vars "${*:2}"
 		if [ ${pipeflag} ] ; then
-			bridge=$(echo ${ENV} | grep -Po 'BRIDGED=([^\s]*)')
+			bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
 			[ ${bridge} ] && {
 				# remove "BRIDGED="" string
 				bridge="${bridge#BRIDGED=}"
 				PORT=""
 			}
 		else
-			ENV=$(echo ${ENV} | perl -pe 's/BRIDGED=.*?\s/BRIDGED= /')
+			ENV=$(echo "${ENV}" | perl -pe 's/-e +BRIDGED=.*?\s//')
 		fi
 		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1
 		then
