@@ -43,6 +43,13 @@ isrootuser(){
 	fi
 }
 
+jeff_bridge() {
+	local bridge=$(docker inspect --format='{{.Config.Env}}' ${1} | grep -Po 'BRIDGED=([^\s]*)')
+	[ ${bridge} ] && {
+		bridge="${bridge#BRIDGED=}"
+		[ ${bridge} ] && echo ${bridge}
+	}
+}
 
 help_lock() {
 	echo "Usage: doquer lock CONTAINER"
@@ -59,11 +66,11 @@ help_unlock() {
 }
 
 help_rmall() {
-	echo "Usage: doquer rmall"
+	echo "Usage: doquer rmall [OPTIONS] IMAGE"
 	echo
-	echo "Remove all unlocked container´s"
+	echo "Remove unlocked container´s from IMAGE"
 	echo
-	echo "	-f Force remove running containers"
+	echo "	--all Remove all unlocked containers"
 	echo
 }
 
@@ -185,24 +192,50 @@ case "$1" in
 			help_rmall
 			exit 1
 		fi
-		if [ "$2" == "-f" ]; then
-			running=$( docker ps -q | grep -v -f ${DOQUER_LOCK_FILE} )
-			[ ${#running[@]} -ne 0 ] && docker stop ${running} 
+		if [ "$2" == "--all" ]; then
+			allflag="true"
 		fi
-		allcontainers=$( docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE} )
-		[ ${#allcontainers[@]} -ne 0 ] && docker rm ${allcontainers}
+		set_docker_vars
+		allcontainers=($(docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE}))
+		[ ${allflag} ] || {
+			if [ "$2" ]; then
+				_image="$2"
+			else
+				_image=${IMAGE}
+			fi
+			[ ! ${_image} ] && . ${0} rmall --help
+			if ! docker inspect ${_image}; then exit 1; fi
+			for i in "${allcontainers[@]}"; do
+				if [ $(docker inspect --format='{{.Config.Image}}' $i) != ${_image} ] ; then
+					allcontainers=(${allcontainers[@]//*$i*})
+				fi 
+			done
+		}
+#		[ ${#allcontainers[@]} -ne 0 ] && {
+		for i in "${allcontainers[@]}"; do
+			NSPID=$(docker inspect --format='{{.State.Pid}}' ${i})
+			bridge=$(jeff_bridge ${i})
+			docker rm -f ${i}
+			[ ${bridge} ] && {
+				bridge=($(ifconfig | grep -Po "pl${NSPID}[a-zA-Z0-9]+"))
+				sudo rm -f /var/run/netns/$NSPID
+				sudo rm -fr /proc/$NSPID
+				for i in "${bridge[@]}"; do
+    				sudo ip link delete ${i}
+    			done
+			}
+		done
 		;;
 	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_rmiall
 			exit 1
 		fi
-		allimages=$( docker images -q )
-		for cont in ${allimages}
-		do
+		allimages=($(docker images -q)) 
+		for i in "${allimages[@]}"; do
 			# is untagged image?
-			if docker images | grep '<none>' | grep ${cont} 1>/dev/null 2>&1; then
-				docker rmi -f ${cont}
+			if docker images | grep '<none>' | grep ${i} 1>/dev/null 2>&1; then
+				docker rmi -f ${i}
 			fi
 		done
 		;;
@@ -211,12 +244,11 @@ case "$1" in
 			help_integrity
 			exit 1
 		fi
-		contexclude=$( cat ${DOQUER_LOCK_FILE} )
-		for cont in ${contexclude}
-		do
-			if ! docker inspect ${cont} 1>/dev/null 2>&1; then
+		contexclude=($(cat ${DOQUER_LOCK_FILE}))
+		for i in "${contexclude[@]}"; do
+			if ! docker inspect ${i} 1>/dev/null 2>&1; then
 				# removefromlist
-				sed -i "/${cont}/d" ${DOQUER_LOCK_FILE}
+				sed -i "/${i}/d" ${DOQUER_LOCK_FILE}
 			fi
 		done
 		;;
@@ -251,13 +283,7 @@ case "$1" in
 			exit 1
 		fi
 		set_docker_vars "${*:2}"
-		if ! doquer rmall -f 2>/dev/null
-		then
-			if ! doquer rmall 2>/dev/null
-			then 
-				true
-			fi
-		fi
+		doquer rmall --all
 		doquer rmiall
 		if docker inspect ${IMAGE} 1>/dev/null 2>&1; then
 			if docker rmi -f ${IMAGE}; then
@@ -271,11 +297,11 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "--pipe" ] ; then
-			pipeflag=1
+			pipeflag="true"
 			shift
 		fi
 		set_docker_vars "${*:2}"
-		if [ ${pipeflag} ] ; then
+		if [ ${pipeflag} ]; then
 			bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
 			[ ${bridge} ] && {
 				# remove "BRIDGED="" string
@@ -380,19 +406,16 @@ case "$1" in
 			exit 1
 		fi
 		docker start ${2}
-		bridge=$(docker inspect --format='{{.Config.Env}}' ${2} | grep -Po 'BRIDGED=([^\s]*)')
+		bridge=$(jeff_bridge ${2})
 		[ ${bridge} ] && {
-			bridge="${bridge#BRIDGED=}"
-			[ ${bridge} ] && {
-				if sudo pipework br0 ${2} ${bridge}
+			if sudo pipework br0 ${2} ${bridge}
 				then 
 					true
 				fi
-			}
 		}
 		;;
 	version)
-		echo "VERSION 0.10 __ bySabi"
+		echo "VERSION 0.11 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
@@ -402,7 +425,7 @@ case "$1" in
 		echo "Commands:"
 		echo "	lock		Lock container, prevent deletion"
 		echo "	unlock		Unlock container"
-		echo "	rmall		Remove all unlock container´s"
+		echo "	rmall		Remove unlocked container´s from IMAGE"
 		echo "	rmiall		Remove all untagged <none> image"
 		echo "	integrity	Check integrity, remove not exist container"
 		echo "	show		Show lock container´s"

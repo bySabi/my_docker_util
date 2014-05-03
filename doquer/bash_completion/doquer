@@ -51,7 +51,7 @@ _doquer_rmall()
 {
 	case "$cur" in
 		*)
-			COMPREPLY=( $( compgen -W "-f" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "--all" -- "$cur" ) )
 			;;
 	esac
 }
