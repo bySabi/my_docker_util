@@ -359,21 +359,20 @@ case "$1" in
 			echo "\"nsinit\" tool needed, download from: https://github.com/bySabi/my_docker_util/raw/master/conf/nsinit"
 			exit 1
 		fi
-		isrootuser
+		#isrootuser
 		contid=${2}
 		shift
 		#set_docker_vars "${*:2}"
 		contid=$(docker inspect --format='{{.ID}}' ${contid})
-		if [ -d ${DOCKER_EXECDRIVE_DIR}/${contid} ]
-		then
-			cd ${DOCKER_EXECDRIVE_DIR}/${contid}
+		if sudo test -d ${DOCKER_EXECDRIVE_DIR}/${contid}; then
 			nsinit_args=${*:2}
 			[ ${nsinit_args} ] || nsinit_args="bash"
-			nsinit exec ${nsinit_args}
+			nsinit_exec="nsinit exec ${nsinit_args}"
+			sudo bash -c "cd ${DOCKER_EXECDRIVE_DIR}/${contid} && ${nsinit_exec}"
 		else
 			echo "Not running container"
 			exit 1
-		fi	
+		fi
 		;;
 	start)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
