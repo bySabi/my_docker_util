@@ -61,6 +61,11 @@ _doquer_rmiall()
 	return
 }
 
+_doquer_rm()
+{
+	__doquer_containers_all
+}
+
 _doquer_integrity()
 {
 	return
@@ -150,6 +155,7 @@ _doquer()
 			unlock
 			rmall
 			rmiall
+			rm
 			integrity
 			show
 			build

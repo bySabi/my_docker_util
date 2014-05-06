@@ -51,6 +51,20 @@ jeff_bridge() {
 	}
 }
 
+rm_bridge_container() {
+	local NSPID=$(docker inspect --format='{{.State.Pid}}' ${1})
+	local bridge=$(jeff_bridge ${1})
+	docker rm -f ${1}
+	[ ${bridge} ] && {
+		bridge=($(ifconfig | grep -Po "pl${NSPID}[a-zA-Z0-9]+"))
+		sudo rm -f /var/run/netns/$NSPID
+		sudo rm -fr /proc/$NSPID
+		for i in "${bridge[@]}"; do
+			sudo ip link delete ${i}
+		done
+	}	
+}
+
 help_lock() {
 	echo "Usage: doquer lock CONTAINER"
 	echo
@@ -78,6 +92,13 @@ help_rmiall() {
 	echo "Usage: doquer rmiall"
 	echo
 	echo "Remove all untagged <none> image"
+	echo
+}
+
+help_rm() {
+	echo "Usage: doquer rm CONTAINER"
+	echo
+	echo "Remove container consistently"
 	echo
 }
 
@@ -213,18 +234,17 @@ case "$1" in
 		}
 #		[ ${#allcontainers[@]} -ne 0 ] && {
 		for i in "${allcontainers[@]}"; do
-			NSPID=$(docker inspect --format='{{.State.Pid}}' ${i})
-			bridge=$(jeff_bridge ${i})
-			docker rm -f ${i}
-			[ ${bridge} ] && {
-				bridge=($(ifconfig | grep -Po "pl${NSPID}[a-zA-Z0-9]+"))
-				sudo rm -f /var/run/netns/$NSPID
-				sudo rm -fr /proc/$NSPID
-				for i in "${bridge[@]}"; do
-    				sudo ip link delete ${i}
-    			done
-			}
+			rm_bridge_container ${i}
 		done
+		;;
+	rm)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+			help_rm
+			exit 1
+		fi
+set -x
+		rm_bridge_container ${2}
+		doquer integrity
 		;;
 	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -415,7 +435,7 @@ case "$1" in
 		}
 		;;
 	version)
-		echo "VERSION 0.11 __ bySabi"
+		echo "VERSION 0.12 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
@@ -427,6 +447,7 @@ case "$1" in
 		echo "	unlock		Unlock container"
 		echo "	rmall		Remove unlocked container´s from IMAGE"
 		echo "	rmiall		Remove all untagged <none> image"
+		echo "	rm		Remove container consistently"
 		echo "	integrity	Check integrity, remove not exist container"
 		echo "	show		Show lock container´s"
 		echo "	build		Build a container from a configuration file"
