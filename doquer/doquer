@@ -242,7 +242,6 @@ case "$1" in
 			help_rm
 			exit 1
 		fi
-set -x
 		rm_bridge_container ${2}
 		doquer integrity
 		;;
