@@ -287,6 +287,10 @@ case "$1" in
 			help_build
 			exit 1
 		fi
+		if ! [ $(id -u) = 0 ]; then
+			sudo $0 $*
+			exit 0
+		fi
 		set_docker_vars "${*:2}"
 		docker_image_dir=$(dirname ${DOCKER_RUN_CONF})
 		[ "$(ls -A ${docker_image_dir}/usr 2>/dev/null)" ] && chmod 755 ${docker_image_dir}/usr/*
@@ -434,7 +438,7 @@ case "$1" in
 		}
 		;;
 	version)
-		echo "VERSION 0.12 __ bySabi"
+		echo "VERSION 0.13 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
