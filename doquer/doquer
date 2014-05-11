@@ -428,17 +428,19 @@ case "$1" in
 			help_start
 			exit 1
 		fi
-		docker start ${2}
-		bridge=$(jeff_bridge ${2})
-		[ ${bridge} ] && {
-			if sudo pipework br0 ${2} ${bridge}
-				then 
-					true
-				fi
-		}
+		for i in ${*:2}; do
+			docker start ${i}
+			bridge=$(jeff_bridge ${i})
+			[ ${bridge} ] && {
+				if sudo pipework br0 ${i} ${bridge}
+					then 
+						true
+					fi
+			}
+		done
 		;;
 	version)
-		echo "VERSION 0.13 __ bySabi"
+		echo "VERSION 0.14 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
