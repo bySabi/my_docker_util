@@ -306,7 +306,7 @@ case "$1" in
 			exit 1
 		fi
 		set_docker_vars "${*:2}"
-		doquer rmall --all
+		doquer rmall
 		doquer rmiall
 		if docker inspect ${IMAGE} 1>/dev/null 2>&1; then
 			if docker rmi -f ${IMAGE}; then
