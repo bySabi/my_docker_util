@@ -13,16 +13,11 @@ RUN_COMMAND=
 RUNTMP_COMMAND=
 ATTACH_COMMAND=
 
-
 DOQUER_LOCK_FILE=/var/lib/doquer/doquer_containers
-
 DOCKER_EXECDRIVE_DIR=/var/lib/docker/execdriver/native
 
-
 set_docker_vars() {
-
 	local tmp_arg=$( mktemp )
-
 	if [[ -d "$1" ]]; then
 		#is a directory
 		DOCKER_RUN_CONF=$(dirname ${1})/${DOCKER_RUN_CONF}
@@ -36,10 +31,23 @@ set_docker_vars() {
 	echo "${*:1}" > ${tmp_arg} && source ${tmp_arg}
 }
 
-isrootuser(){
-	if ! [ $(id -u) = 0 ]; then
-		echo "This script must be run as root" 1>&2
-		exit 1
+getcontainerid() {
+	echo $(docker inspect --format='{{.ID}}' ${1})
+}
+
+getcontainerImageid() {
+	echo $(docker inspect --format='{{.Image}}' ${1})
+}
+
+getimageid() {
+	echo $(docker inspect --format='{{.id}}' ${1})
+}
+
+islockedcontainer() {
+	if grep -q ${1:0:12} ${DOQUER_LOCK_FILE}; then
+		true
+	else
+		false
 	fi
 }
 
@@ -49,20 +57,6 @@ jeff_bridge() {
 		bridge="${bridge#BRIDGED=}"
 		[ ${bridge} ] && echo ${bridge}
 	}
-}
-
-rm_bridge_container() {
-	local NSPID=$(docker inspect --format='{{.State.Pid}}' ${1})
-	local bridge=$(jeff_bridge ${1})
-	docker rm -f ${1}
-	[ ${bridge} ] && {
-		bridge=($(ifconfig | grep -Po "pl${NSPID}[a-zA-Z0-9]+"))
-		sudo rm -f /var/run/netns/$NSPID
-		sudo rm -fr /proc/$NSPID
-		for i in "${bridge[@]}"; do
-			sudo ip link delete ${i}
-		done
-	}	
 }
 
 help_lock() {
@@ -76,29 +70,6 @@ help_unlock() {
 	echo "Usage: doquer unlock CONTAINER"
 	echo
 	echo "Unlock container, remove from locked list"
-	echo
-}
-
-help_rmall() {
-	echo "Usage: doquer rmall [OPTIONS] IMAGE"
-	echo
-	echo "Remove unlocked container´s from IMAGE"
-	echo
-	echo "	--all Remove all unlocked containers"
-	echo
-}
-
-help_rmiall() {
-	echo "Usage: doquer rmiall"
-	echo
-	echo "Remove all untagged <none> image"
-	echo
-}
-
-help_rm() {
-	echo "Usage: doquer rm CONTAINER"
-	echo
-	echo "Remove container consistently"
 	echo
 }
 
@@ -118,6 +89,34 @@ help_show() {
 	echo
 }
 
+help_rm() {
+	echo "Usage: doquer rm CONTAINER´s"
+	echo
+	echo "Remove container´s consistently"
+	echo
+}
+
+help_rmall() {
+	echo "Usage: doquer rmall"
+	echo
+	echo "Remove all unlocked container´s"
+	echo
+}
+
+help_rmi() {
+	echo "Usage: doquer rmi IMAGE´s"
+	echo
+	echo "Remove image´s consistently"
+	echo
+}
+
+help_rmiall() {
+	echo "Usage: doquer rmiall"
+	echo
+	echo "Remove all untagged <none> image"
+	echo
+}
+
 help_build() {
 	echo "Usage: doquer build [path|args...]"
 	echo
@@ -128,7 +127,7 @@ help_build() {
 help_cleanbuild() {
 	echo "Usage: doquer cleanbuild [path|args...]"
 	echo
-	echo "Perform \"rmall\", \"rmiall\" and delete a container from a configuration file"
+	echo "Perform \"rmiall\" and delete IMAGE from configuration file"
 	echo
 }
 
@@ -164,107 +163,57 @@ help_conf() {
 help_attach() {
 	echo "Usage: doquer attach CONTAINER [COMMAND]"
 	echo
-	echo "Attach to a running container and run command"
+	echo "Attach to a running container and run comman´d"
 	echo
 }
 
 help_start() {
-	echo "Usage: doquer start CONTAINER"
+	echo "Usage: doquer start CONTAINER´s"
 	echo
-	echo "Start a stopped container"
+	echo "Start stopped container´s"
 	echo
 }
 
 case "$1" in
 	lock)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_lock
 			exit 1
 		fi
-		contid=$(docker inspect --format='{{.ID}}' ${2})
-		[ "$?" -ne 0 ] && exit 1
-		# extrac first 12 from container ID
-		contid=${contid:0:12}
-		# container is locked?
-		if grep -q ${contid} ${DOQUER_LOCK_FILE}; then
-			echo "${2} -- already locked."
-			exit 1
-		fi
-		echo "${contid}" >> ${DOQUER_LOCK_FILE}
+		for contid in ${*:2}; do
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || exit 1
+			contid=${contid:0:12}
+			if islockedcontainer ${contid}; then
+				echo "${contid} -- already locked."
+				exit 1
+			fi
+			echo "${contid}" >> ${DOQUER_LOCK_FILE}
+		done
 		;;
 	unlock)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_unlock
 			exit 1
 		fi
-		contid=$(docker inspect --format='{{.ID}}' ${2})
-		[ "$?" -ne 0 ] && exit 1
-		contid=${contid:0:12}
-		if grep -q ${contid} ${DOQUER_LOCK_FILE}; then
-			# removefromlist
-			sed -i "/${contid}/d" ${DOQUER_LOCK_FILE}
-		else
-			echo "${2}  -- isn´t on locked list."
-			exit 1
-		fi
-		;;
-	rmall)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
-			help_rmall
-			exit 1
-		fi
-		if [ "$2" == "--all" ]; then
-			allflag="true"
-		fi
-		set_docker_vars
-		allcontainers=($(docker ps -a -q | grep -v -f ${DOQUER_LOCK_FILE}))
-		[ ${allflag} ] || {
-			if [ "$2" ]; then
-				_image="$2"
+		for contid in ${*:2}; do
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || exit 1
+			contid=${contid:0:12}
+			if islockedcontainer ${contid}; then
+				# removefromlist
+				sed -i "/${contid}/d" ${DOQUER_LOCK_FILE}
 			else
-				_image=${IMAGE}
-			fi
-			[ ! ${_image} ] && . ${0} rmall --help
-			if ! docker inspect ${_image}; then exit 1; fi
-			for i in "${allcontainers[@]}"; do
-				if [ $(docker inspect --format='{{.Config.Image}}' $i) != ${_image} ] ; then
-					allcontainers=(${allcontainers[@]//*$i*})
-				fi 
-			done
-		}
-#		[ ${#allcontainers[@]} -ne 0 ] && {
-		for i in "${allcontainers[@]}"; do
-			rm_bridge_container ${i}
-		done
-		;;
-	rm)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
-			help_rm
-			exit 1
-		fi
-		rm_bridge_container ${2}
-		doquer integrity
-		;;
-	rmiall)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
-			help_rmiall
-			exit 1
-		fi
-		allimages=($(docker images -q)) 
-		for i in "${allimages[@]}"; do
-			# is untagged image?
-			if docker images | grep '<none>' | grep ${i} 1>/dev/null 2>&1; then
-				docker rmi -f ${i}
+				echo "${contid} -- isn´t on locked list."
+				exit 1
 			fi
 		done
 		;;
 	integrity)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_integrity
 			exit 1
 		fi
-		contexclude=($(cat ${DOQUER_LOCK_FILE}))
-		for i in "${contexclude[@]}"; do
+		contexclude=$(cat ${DOQUER_LOCK_FILE})
+		for i in ${contexclude}; do
 			if ! docker inspect ${i} 1>/dev/null 2>&1; then
 				# removefromlist
 				sed -i "/${i}/d" ${DOQUER_LOCK_FILE}
@@ -272,18 +221,81 @@ case "$1" in
 		done
 		;;
 	show)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_show
 			exit 1
 		fi
 		if [ "$2" == "-q" ]; then
-			cat ${DOQUER_LOCK_FILE}
+			echo $(cat ${DOQUER_LOCK_FILE})
 		else
 			docker ps -a | grep -e "IMAGE" -f ${DOQUER_LOCK_FILE}
 		fi
 		;;
-	build)
+	rm)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
+			help_rm
+			exit 1
+		fi
+		for contid in ${*:2}; do
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || exit 1
+			if islockedcontainer ${contid}; then
+				echo "${contid:0:12} -- is on locked list."
+				exit 1
+			else
+				NSPID=$(docker inspect --format='{{.State.Pid}}' ${contid})
+				bridge=$(jeff_bridge ${contid})
+				docker rm -f ${contid}
+				[ ${bridge} ] && {
+					bridges=$(ifconfig | grep -Po "pl${NSPID}[a-zA-Z0-9]+")
+					sudo rm -f /var/run/netns/$NSPID
+					sudo rm -fr /proc/$NSPID
+					for i in ${bridges}; do
+						sudo ip link delete ${i}
+					done
+				}
+			fi
+		done
+		;;
+	rmall)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
+			help_rmall
+			exit 1
+		fi
+		allcontainers=($(docker ps -a -q))
+		for contid in ${allcontainers[@]}; do
+			if islockedcontainer ${contid}; then
+				allcontainers=(${allcontainers[@]//*$contid*})
+			fi
+		done
+		allcontainers=$(echo ${allcontainers[*]}) # array to var
+		doquer rm ${allcontainers}
+		;;
+	rmi)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
+			help_rmi
+			exit 1
+		fi
+		allcontainers=$(docker ps -a -q)
+		for imageid in ${*:2}; do
+			imageid=$(getimageid ${imageid})
+			for contid in ${allcontainers}; do
+				contimageid=$(getcontainerImageid ${contid})
+				if [ "${contimageid}" == "${imageid}" ] ; then
+					if ! doquer rm ${contid}; then exit 1; fi
+				fi
+			done
+			docker rmi -f ${imageid}
+		done
+		;;
+	rmiall)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+			help_rmiall
+			exit 1
+		fi
+		doquer rmi $(docker images | grep '<none>' | awk '{print $3}')
+		;;
+	build)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_build
 			exit 1
 		fi
@@ -301,25 +313,20 @@ case "$1" in
 			${docker_image_dir}
 		;;
 	cleanbuild)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_cleanbuild
 			exit 1
 		fi
 		set_docker_vars "${*:2}"
-		doquer rmall
 		doquer rmiall
-		if docker inspect ${IMAGE} 1>/dev/null 2>&1; then
-			if docker rmi -f ${IMAGE}; then
-				echo Deleted: ${IMAGE}
-			fi
-		fi
+		doquer rmi ${IMAGE}
 		;;
 	run)
-		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ]; then
 			help_run
 			exit 1
 		fi
-		if [ "$2" == "--pipe" ] ; then
+		if [ "$2" == "--pipe" ]; then
 			pipeflag="true"
 			shift
 		fi
@@ -334,8 +341,7 @@ case "$1" in
 		else
 			ENV=$(echo "${ENV}" | perl -pe 's/-e +BRIDGED=.*?\s//')
 		fi
-		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1
-		then
+		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1; then
 			doquer build
 		fi
 		contid=$(docker run \
@@ -348,14 +354,9 @@ case "$1" in
 			${DNS} \
 			${VOLUME} \
 			${IMAGE} \
-			${RUN_COMMAND})
-		
-		[ ${pipeflag} ] && [ ${bridge} ] && {
-			if sudo pipework br0 ${contid} ${bridge}
-			then
-				true
-			fi
-		}
+			${RUN_COMMAND} \
+		)
+		[ ${pipeflag} ] && [ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
 		echo  ${contid}
 		;;
 	runtmp)
@@ -364,7 +365,6 @@ case "$1" in
 			exit 1
 		fi
 		if [ "$2" == "--pipe" ] ; then
-			#isrootuser
 			pipeflag=1
 			shift
 		fi
@@ -408,13 +408,9 @@ case "$1" in
 			echo "\"nsinit\" tool needed, download from: https://github.com/bySabi/my_docker_util/raw/master/conf/nsinit"
 			exit 1
 		fi
-		#isrootuser
-		contid=${2}
-		shift
-		#set_docker_vars "${*:2}"
-		contid=$(docker inspect --format='{{.ID}}' ${contid})
+		contid=$(getcontainerid ${2})
 		if sudo test -d ${DOCKER_EXECDRIVE_DIR}/${contid}; then
-			nsinit_args=${*:2}
+			nsinit_args=${*:3}
 			[ ${nsinit_args} ] || nsinit_args="bash"
 			nsinit_exec="nsinit exec ${nsinit_args}"
 			sudo bash -c "cd ${DOCKER_EXECDRIVE_DIR}/${contid} && ${nsinit_exec}"
@@ -428,19 +424,14 @@ case "$1" in
 			help_start
 			exit 1
 		fi
-		for i in ${*:2}; do
-			docker start ${i}
-			bridge=$(jeff_bridge ${i})
-			[ ${bridge} ] && {
-				if sudo pipework br0 ${i} ${bridge}
-					then 
-						true
-					fi
-			}
+		for contid in ${*:2}; do
+			docker start ${contid}
+			bridge=$(jeff_bridge ${contid})
+			[ ${bridge} ] && sudo pipework br0 ${i} ${bridge}
 		done
 		;;
 	version)
-		echo "VERSION 0.14 __ bySabi"
+		echo "VERSION 0.18 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
@@ -450,13 +441,14 @@ case "$1" in
 		echo "Commands:"
 		echo "	lock		Lock container, prevent deletion"
 		echo "	unlock		Unlock container"
-		echo "	rmall		Remove unlocked container´s from IMAGE"
-		echo "	rmiall		Remove all untagged <none> image"
-		echo "	rm		Remove container consistently"
 		echo "	integrity	Check integrity, remove not exist container"
-		echo "	show		Show lock container´s"
+		echo "	show		Show lock container´s"		
+		echo "	rm		Remove container consistently"
+		echo "	rmall		Remove unlocked container´s"
+		echo "	rmi		Remove image´s consistently"
+		echo "	rmiall		Remove all untagged <none> image´s"
 		echo "	build		Build a container from a configuration file"
-		echo "	cleanbuild	Perform \"rmall\", \"rmiall\" and delete a container from a configuration file"
+		echo "	cleanbuild	Perform \"rmiall\" and delete IMAGE from configuration file"
 		echo "	run		Run a background container from a configuration file"
 		echo "	runtmp		Run a temporal container from a configuration file"
 		echo "	conf		Get configuration file"

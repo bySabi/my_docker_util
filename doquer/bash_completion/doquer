@@ -9,6 +9,13 @@
 #
 ## ripped from docker bash completion
 
+__doquer_images_all()
+{
+	local images
+	images="$( docker images -q )"
+	COMPREPLY=( $( compgen -W "$images" -- "$cur" ) )
+}
+
 __doquer_containers_exclude()
 {
 	local containers
@@ -47,18 +54,18 @@ _doquer_unlock()
 	__doquer_containers_exclude
 }
 
-_doquer_rmall()
+_doquer_integrity()
+{
+	return
+}
+
+_doquer_show()
 {
 	case "$cur" in
 		*)
-			COMPREPLY=( $( compgen -W "--all" -- "$cur" ) )
+			COMPREPLY=( $( compgen -W "-q" -- "$cur" ) )
 			;;
 	esac
-}
-
-_doquer_rmiall()
-{
-	return
 }
 
 _doquer_rm()
@@ -66,7 +73,17 @@ _doquer_rm()
 	__doquer_containers_all
 }
 
-_doquer_integrity()
+_doquer_rmall()
+{
+	return
+}
+
+_doquer_rmi()
+{
+	__doquer_images_all
+}
+
+_doquer_rmiall()
 {
 	return
 }
@@ -114,15 +131,6 @@ _doquer_start()
 	__doquer_containers_stopped
 }
 
-_doquer_show()
-{
-	case "$cur" in
-		*)
-			COMPREPLY=( $( compgen -W "-q" -- "$cur" ) )
-			;;
-	esac
-}
-
 _doquer_version()
 {
 	return
@@ -153,11 +161,12 @@ _doquer()
 	local commands="
 			lock
 			unlock
-			rmall
-			rmiall
-			rm
 			integrity
 			show
+			rm
+			rmall
+			rmi
+			rmiall
 			build
 			cleanbuild
 			run
