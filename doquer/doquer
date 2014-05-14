@@ -132,11 +132,9 @@ help_cleanbuild() {
 }
 
 help_run() {
-	echo "Usage: doquer run [OPTIONS] [path|args...]"
+	echo "Usage: doquer run [path|args...]"
 	echo
 	echo "Run a background container from a configuration file"
-	echo
-	echo "	--pipe Use pipework for running container"
 	echo
 	echo "	 Ex: doquer run docker-run-test.conf ENV='"-e PASSWORD=root"' PORT='"-p 8008:80"'"
 	echo
@@ -146,8 +144,6 @@ help_runtmp() {
 	echo "Usage: doquer runtmp [path|args...]"
 	echo
 	echo "Run a temporal container from a configuration file"
-	echo
-	echo "	--pipe Use pipework for running container"
 	echo
 }
 
@@ -216,7 +212,7 @@ case "$1" in
 		for i in ${contexclude}; do
 			if ! docker inspect ${i} 1>/dev/null 2>&1; then
 				# removefromlist
-				sed -i "/${i}/d" ${DOQUER_LOCK_FILE}
+				sed -i "/${i:0:12}/d" ${DOQUER_LOCK_FILE}
 			fi
 		done
 		;;
@@ -326,18 +322,12 @@ case "$1" in
 			help_run
 			exit 1
 		fi
-		if [ "$2" == "--pipe" ]; then
-			pipeflag="true"
-			shift
-		fi
 		set_docker_vars "${*:2}"
-		if [ ${pipeflag} ]; then
-			bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
-			[ ${bridge} ] && {
-				# remove "BRIDGED="" string
-				bridge="${bridge#BRIDGED=}"
-				PORT=""
-			}
+		bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
+		if [ ${bridge} ]; then
+			# remove "BRIDGED="" string
+			bridge="${bridge#BRIDGED=}"
+			PORT=""
 		else
 			ENV=$(echo "${ENV}" | perl -pe 's/-e +BRIDGED=.*?\s//')
 		fi
@@ -356,17 +346,13 @@ case "$1" in
 			${IMAGE} \
 			${RUN_COMMAND} \
 		)
-		[ ${pipeflag} ] && [ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
+		[ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
 		echo  ${contid}
 		;;
 	runtmp)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_runtmp
 			exit 1
-		fi
-		if [ "$2" == "--pipe" ] ; then
-			pipeflag=1
-			shift
 		fi
 		set_docker_vars "${*:2}"
 		docker run \
@@ -427,11 +413,11 @@ case "$1" in
 		for contid in ${*:2}; do
 			docker start ${contid}
 			bridge=$(jeff_bridge ${contid})
-			[ ${bridge} ] && sudo pipework br0 ${i} ${bridge}
+			[ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
 		done
 		;;
 	version)
-		echo "VERSION 0.18 __ bySabi"
+		echo "VERSION 0.19 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"

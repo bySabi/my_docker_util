@@ -100,20 +100,12 @@ _doquer_cleanbuild()
 
 _doquer_run()
 {
-	case "$cur" in
-		*)
-			COMPREPLY=( $( compgen -W "--pipe" -- "$cur" ) )
-			;;
-	esac
+	_filedir
 }
 
 _doquer_runtmp()
 {
-	case "$cur" in
-		*)
-			COMPREPLY=( $( compgen -W "--pipe" -- "$cur" ) )
-			;;
-	esac
+	_filedir
 }
 
 _doquer_conf()
