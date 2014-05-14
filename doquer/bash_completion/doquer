@@ -100,7 +100,11 @@ _doquer_cleanbuild()
 
 _doquer_run()
 {
-	_filedir
+	case "$cur" in
+		*)
+			COMPREPLY=( $( compgen -W "-f" -- "$cur" ) )
+			;;
+	esac
 }
 
 _doquer_runtmp()

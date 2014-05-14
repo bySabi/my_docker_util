@@ -32,15 +32,34 @@ set_docker_vars() {
 }
 
 getcontainerid() {
-	echo $(docker inspect --format='{{.ID}}' ${1})
+	local id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.ID}}' ${1} 2>/dev/null))
+	[ -z ${id} ] && id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.id}}' ${1} 2>/dev/null))
+	echo ${id}
 }
 
 getcontainerImageid() {
-	echo $(docker inspect --format='{{.Image}}' ${1})
+	local id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.Image}}' ${1} 2>/dev/null))
+	echo ${id}
 }
 
-getimageid() {
-	echo $(docker inspect --format='{{.id}}' ${1})
+getallcontainerofimage() {
+	local allcontainers=($(docker ps -a -q))
+	local contid
+	for contid in ${allcontainers[@]}; do
+		local contimageid=$(getcontainerImageid ${contid})
+		if [ "${contimageid}" != "${1}" ] ; then
+			allcontainers=(${allcontainers[@]//*$contid*})
+		fi
+	done
+	echo $(echo ${allcontainers[*]})
+}
+
+iscontainer() {
+	if [ $(getcontainerImageid ${1}) ]; then
+		true
+	else
+		false
+	fi
 }
 
 islockedcontainer() {
@@ -51,8 +70,16 @@ islockedcontainer() {
 	fi
 }
 
+iscontainerofimage() {
+	if [ "$(getcontainerImageid ${1})" == "${2}" ]; then 
+		true
+	else
+		false
+	fi
+}
+
 jeff_bridge() {
-	local bridge=$(docker inspect --format='{{.Config.Env}}' ${1} | grep -Po 'BRIDGED=([^\s]*)')
+	local bridge=$(docker inspect --format='{{.Config.Env}}' ${1} 2>/dev/null | grep -Po 'BRIDGED=([^\s]*)')
 	[ ${bridge} ] && {
 		bridge="${bridge#BRIDGED=}"
 		[ ${bridge} ] && echo ${bridge}
@@ -138,6 +165,8 @@ help_run() {
 	echo
 	echo "	 Ex: doquer run docker-run-test.conf ENV='"-e PASSWORD=root"' PORT='"-p 8008:80"'"
 	echo
+	echo "	-f Force run"
+	echo
 }
 
 help_runtmp() {
@@ -177,7 +206,14 @@ case "$1" in
 			exit 1
 		fi
 		for contid in ${*:2}; do
-			contid=$(getcontainerid ${contid}) && [ ${contid} ] || exit 1
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || {
+				echo "Error: No such container: ${*:2}"
+				exit 1
+			}
+			if ! iscontainer ${contid}; then
+				echo "Error: Not a container: ${*:2}"
+				exit 1
+			fi
 			contid=${contid:0:12}
 			if islockedcontainer ${contid}; then
 				echo "${contid} -- already locked."
@@ -223,6 +259,7 @@ case "$1" in
 		fi
 		if [ "$2" == "-q" ]; then
 			echo $(cat ${DOQUER_LOCK_FILE})
+			shift
 		else
 			docker ps -a | grep -e "IMAGE" -f ${DOQUER_LOCK_FILE}
 		fi
@@ -233,7 +270,14 @@ case "$1" in
 			exit 1
 		fi
 		for contid in ${*:2}; do
-			contid=$(getcontainerid ${contid}) && [ ${contid} ] || exit 1
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || {
+				echo "Error: No such container: ${*:2}"
+				exit 1
+			}
+			if ! iscontainer ${contid}; then
+				echo "Error: Not a container: ${*:2}"
+				exit 1
+			fi
 			if islockedcontainer ${contid}; then
 				echo "${contid:0:12} -- is on locked list."
 				exit 1
@@ -271,15 +315,12 @@ case "$1" in
 			help_rmi
 			exit 1
 		fi
-		allcontainers=$(docker ps -a -q)
 		for imageid in ${*:2}; do
-			imageid=$(getimageid ${imageid})
-			for contid in ${allcontainers}; do
-				contimageid=$(getcontainerImageid ${contid})
-				if [ "${contimageid}" == "${imageid}" ] ; then
-					if ! doquer rm ${contid}; then exit 1; fi
-				fi
-			done
+			imageid=$(getcontainerid ${imageid})
+			allcontainers=$(getallcontainerofimage ${imageid})
+			[ -z "${allcontainers}" ] || { # if not empty "${allcontainers}"
+				if ! doquer rm ${allcontainers}; then exit 1; fi
+			}
 			docker rmi -f ${imageid}
 		done
 		;;
@@ -322,6 +363,10 @@ case "$1" in
 			help_run
 			exit 1
 		fi
+		if [ "$2" == "-f" ]; then
+			forcerun=true
+			shift
+		fi
 		set_docker_vars "${*:2}"
 		bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
 		if [ ${bridge} ]; then
@@ -334,6 +379,13 @@ case "$1" in
 		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1; then
 			doquer build
 		fi
+		[ ${forcerun} ] && {
+			cont_name="${CONT_NAME#--name}"
+			if iscontainerofimage $(getcontainerid "${cont_name}") $(getcontainerid ${IMAGE}) 
+			then
+				doquer rm ${cont_name} 1>/dev/null
+			fi
+		}
 		contid=$(docker run \
 			-d \
 			-t \
@@ -417,7 +469,7 @@ case "$1" in
 		done
 		;;
 	version)
-		echo "VERSION 0.19 __ bySabi"
+		echo "VERSION 0.20 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
