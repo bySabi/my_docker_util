@@ -10,7 +10,6 @@ HOST_NAME=
 CONT_NAME=
 [ -f "docker-run.conf" ] && DOCKER_RUN_CONF="docker-run.conf"
 RUN_COMMAND=
-RUNTMP_COMMAND=
 ATTACH_COMMAND=
 
 DOQUER_LOCK_FILE=/var/lib/doquer/doquer_containers
@@ -427,8 +426,12 @@ case "$1" in
 			exit 1
 		fi
 		set_docker_vars "${*:2}"
+		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1; then
+			doquer build
+		fi
 		docker run \
-			--rm -t -i \
+			-a stdout -a stderr \
+			--rm \
 			${ENV} \
 			${HOST_NAME} \
 			${CONT_NAME} \
@@ -436,7 +439,7 @@ case "$1" in
 			${DNS} \
 			${VOLUME} \
 			${IMAGE} \
-			${RUNTMP_COMMAND}
+			${RUN_COMMAND}
 		;;
 	conf)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
@@ -453,7 +456,6 @@ case "$1" in
 		echo "CONT_NAME=${CONT_NAME}"
 		echo "DOCKER_RUN_CONF=${DOCKER_RUN_CONF}"
 		echo "RUN_COMMAND=${RUN_COMMAND}"
-		echo "RUNTMP_COMMAND=${RUNTMP_COMMAND}"
 		echo "ATTACH_COMMAND=${ATTACH_COMMAND}"
 		;;
 	attach)
