@@ -122,6 +122,11 @@ _doquer_attach()
 	__doquer_containers_running
 }
 
+_doquer_pipework()
+{
+	__doquer_containers_running
+}
+
 _doquer_start()
 {
 	__doquer_containers_stopped
@@ -169,6 +174,7 @@ _doquer()
 			runtmp
 			conf
 			attach
+			pipework
 			start
 			version
 		"

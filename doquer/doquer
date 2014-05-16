@@ -62,6 +62,15 @@ iscontainer() {
 	fi
 }
 
+isrunningcontainer() {
+	local status=$(docker inspect --format='{{.State.Running}}' ${1} 2>/dev/null)
+	if [ "${status}" == "true" ]; then
+		true
+	else
+		false
+	fi
+}
+
 islockedcontainer() {
 	if grep -q ${1:0:12} ${DOQUER_LOCK_FILE}; then
 		true
@@ -84,6 +93,18 @@ jeff_bridge() {
 		bridge="${bridge#BRIDGED=}"
 		[ ${bridge} ] && echo ${bridge}
 	}
+}
+
+## deprecated code
+isbridge_deprecated() {
+			bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
+		if [ ${bridge} ]; then
+			# remove "BRIDGED="" string
+			bridge="${bridge#BRIDGED=}"
+			PORT=""
+		else
+			ENV=$(echo "${ENV}" | perl -pe 's/-e +BRIDGED=.*?\s//')
+		fi
 }
 
 help_lock() {
@@ -147,7 +168,7 @@ help_rmiall() {
 help_build() {
 	echo "Usage: doquer build [path|args...]"
 	echo
-	echo "Build a container from a configuration file"
+	echo "Build container from configuration file"
 	echo
 }
 
@@ -161,7 +182,7 @@ help_cleanbuild() {
 help_run() {
 	echo "Usage: doquer run [path|args...]"
 	echo
-	echo "Run a background container from a configuration file"
+	echo "Run background container from configuration file"
 	echo
 	echo "	 Ex: doquer run docker-run-test.conf ENV='"-e PASSWORD=root"' PORT='"-p 8008:80"'"
 	echo
@@ -172,7 +193,7 @@ help_run() {
 help_runtmp() {
 	echo "Usage: doquer runtmp [path|args...]"
 	echo
-	echo "Run a temporal container from a configuration file"
+	echo "Run temporal container from configuration file"
 	echo
 }
 
@@ -188,7 +209,14 @@ help_conf() {
 help_attach() {
 	echo "Usage: doquer attach CONTAINER [COMMAND]"
 	echo
-	echo "Attach to a running container and run comman´d"
+	echo "Attach to running container and run comman´d"
+	echo
+}
+
+help_pipework() {
+	echo "Usage: doquer pipework CONTAINER´s"
+	echo
+	echo "Pipework running container´s"
 	echo
 }
 
@@ -368,14 +396,6 @@ case "$1" in
 			shift
 		fi
 		set_docker_vars "${*:2}"
-		bridge=$(echo "${ENV}" | grep -Po 'BRIDGED=([^\s]*)')
-		if [ ${bridge} ]; then
-			# remove "BRIDGED="" string
-			bridge="${bridge#BRIDGED=}"
-			PORT=""
-		else
-			ENV=$(echo "${ENV}" | perl -pe 's/-e +BRIDGED=.*?\s//')
-		fi
 		if ! docker inspect ${IMAGE} 1>/dev/null 2>&1; then
 			doquer build
 		fi
@@ -398,7 +418,7 @@ case "$1" in
 			${IMAGE} \
 			${RUN_COMMAND} \
 		)
-		[ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
+		doquer pipework ${contid}
 		echo  ${contid}
 		;;
 	runtmp)
@@ -457,19 +477,38 @@ case "$1" in
 			exit 1
 		fi
 		;;
+	pipework)
+		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
+			help_pipework
+			exit 1
+		fi
+		for contid in ${*:2}; do
+			bridge=$(jeff_bridge ${contid})
+			[ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
+		done
+		;;
 	start)
 		if [ "$2" == "-h" ] || [ "$2" == "--help" ] ; then
 			help_start
 			exit 1
 		fi
 		for contid in ${*:2}; do
-			docker start ${contid}
-			bridge=$(jeff_bridge ${contid})
-			[ ${bridge} ] && sudo pipework br0 ${contid} ${bridge}
+			contid=$(getcontainerid ${contid}) && [ ${contid} ] || {
+				echo "Error: No such container: ${*:2}"
+				exit 1
+			}
+			if ! iscontainer ${contid}; then
+				echo "Error: Not a container: ${*:2}"
+				exit 1
+			fi
+			if ! isrunningcontainer ${contid}; then
+				docker start ${contid}
+			fi
+			doquer pipework ${contid}
 		done
 		;;
 	version)
-		echo "VERSION 0.20 __ bySabi"
+		echo "VERSION 0.21 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
@@ -485,13 +524,14 @@ case "$1" in
 		echo "	rmall		Remove unlocked container´s"
 		echo "	rmi		Remove image´s consistently"
 		echo "	rmiall		Remove all untagged <none> image´s"
-		echo "	build		Build a container from a configuration file"
+		echo "	build		Build container from configuration file"
 		echo "	cleanbuild	Perform \"rmiall\" and delete IMAGE from configuration file"
-		echo "	run		Run a background container from a configuration file"
-		echo "	runtmp		Run a temporal container from a configuration file"
+		echo "	run		Run background container from configuration file"
+		echo "	runtmp		Run temporal container from configuration file"
 		echo "	conf		Get configuration file"
-		echo "	start		Start a stopped container"
-		echo "	attach		Attach to a running container"
+		echo "	piperwork	Pipework running container"
+		echo "	start		Start stopped container"
+		echo "	attach		Attach to running container"
 		echo "	version		Display version"
 		echo
 		exit 1
