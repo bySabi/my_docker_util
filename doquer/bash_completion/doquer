@@ -9,39 +9,55 @@
 #
 ## ripped from docker bash completion
 
-__doquer_images_all()
+
+__doquer_q()
+{
+	doquer 2>/dev/null "$@"
+}
+
+__docker_q_DISABLE()
+{
+	docker 2>/dev/null "$@"
+}
+
+__doquer_images_all_OLD()
 {
 	local images
 	images="$( docker images -q )"
 	COMPREPLY=( $( compgen -W "$images" -- "$cur" ) )
 }
 
+__doquer_images_all()
+{
+	local repos="$( __docker_q images | awk 'NR>1{print $1}' | grep -v '^<none>$' )"
+	COMPREPLY=( $( compgen -W "$repos" -- "$cur" ) )
+}
+
 __doquer_containers_exclude()
 {
-	local containers
-	containers="$( doquer show -q )"
+	local containers="$( __doquer_q show -q )"
 	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
 }
 
 __doquer_containers_all()
 {
-	local containers
-	containers="$( docker ps -a -q )"
-	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
+	local containers="$( __docker_q ps -a -q )"
+	local names="$( __docker_q inspect --format '{{.Name}}' $containers | sed 's,^/,,' )"
+	COMPREPLY=( $( compgen -W "$names $containers" -- "$cur" ) )
 }
 
 __doquer_containers_running()
 {
-	local containers
-	containers="$( docker ps -q )"
-	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
+	local containers="$( __docker_q ps -q )"
+	local names="$( __docker_q inspect --format '{{.Name}}' $containers | sed 's,^/,,' )"
+	COMPREPLY=( $( compgen -W "$names $containers" -- "$cur" ) )
 }
 
 __doquer_containers_stopped()
 {
-	local containers
-	containers="$( comm -13 <(docker ps -q | sort -u) <(docker ps -a -q | sort -u) )"
-	COMPREPLY=( $( compgen -W "$containers" -- "$cur" ) )
+	local containers="$( { __docker_q ps -a -q; __docker_q ps -q; } | sort | uniq -u )"
+	local names="$( __docker_q inspect --format '{{.Name}}' $containers | sed 's,^/,,' )"
+	COMPREPLY=( $( compgen -W "$names $containers" -- "$cur" ) )
 }
 
 _doquer_lock()
