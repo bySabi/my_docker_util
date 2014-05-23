@@ -348,7 +348,7 @@ case "$1" in
 			[ -z "${allcontainers}" ] || { # if not empty "${allcontainers}"
 				if ! doquer rm ${allcontainers}; then exit 1; fi
 			}
-			docker rmi -f ${imageid}
+			[ ${imageid} ] && docker rmi -f ${imageid}
 		done
 		;;
 	rmiall)
