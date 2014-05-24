@@ -1,0 +1,23 @@
+#!/bin/bash
+
+source ${2}
+tool_name=$(basename ${2} | sed 's|.setup||' )
+
+case ${1} in
+	install)
+		install_tool
+		echo $(get_version) > /srv/"${tool_name}.version"
+		;;
+	update)
+		
+		;;
+	debug)
+		echo "download url: $(get_download_url)"
+		echo "tool version: $(get_version)"
+		;;
+	*)
+		exit 1
+		;;
+esac
+
+exit 0
