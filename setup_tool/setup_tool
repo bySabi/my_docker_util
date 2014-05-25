@@ -1,23 +1,62 @@
 #!/bin/bash
+set -e
 
-source ${2}
+setup_dir=/var/lib/setup_tool
+
 tool_name=$(basename ${2} | sed 's|.setup||' )
+tool_path=${setup_dir}/${tool_name}
+tool_file=${tool_path}/${tool_name}
 
-case ${1} in
-	install)
-		install_tool
-		echo $(get_version) > /srv/"${tool_name}.version"
-		;;
-	update)
-		
-		;;
-	debug)
-		echo "download url: $(get_download_url)"
-		echo "tool version: $(get_version)"
-		;;
-	*)
-		exit 1
-		;;
-esac
+main() {
+	case ${1} in
+		install)
+			setup_tool ${2}
+			source ${tool_file}
+			install_tool
+			echo $(get_version) > "${tool_path}/${tool_name}.version"
+			;;
+		update)
+			source ${tool_file}
+			if isupdate; then
+				update_tool
+			fi
+			;;
+		debug)
+			source ${tool_file}
+			echo "download url: $(get_download_url)"
+			echo "tool version: $(get_version)"
+			;;
+		*)
+			exit 1
+			;;
+	esac
+}
 
+setup_tool() {
+	mkdir -p ${tool_path}
+	cp ${1} ${tool_file}
+}
+
+isupdate() {
+	local file_version=$(cat ${tool_path}/${tool_name}.version)
+	local online_version=$(get_version)
+	if [ ${file_version} != ${online_version} ]; then
+		true
+	else
+		false 	
+	fi
+}
+
+# send_mail(To, From, Subject, Body)
+send_mail() {
+local body=$(sed 's/^\t\+//' <<< "${4}")
+cat <<EOF | msmtp -a default ${1}
+To: ${1}
+From: ${2}
+Subject: ${3}
+${body}
+EOF
+}
+
+main "$@"
 exit 0
