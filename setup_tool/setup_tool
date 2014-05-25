@@ -22,7 +22,7 @@ main() {
 			fi
 			;;
 		debug)
-			source ${tool_file}
+			source ${2}
 			echo "download url: $(get_download_url)"
 			echo "tool version: $(get_version)"
 			;;
