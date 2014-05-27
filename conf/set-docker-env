@@ -2,3 +2,15 @@ if ! grep "CONTAINERS_BASE" /etc/environment >/dev/null
 then
 	echo "CONTAINERS_BASE=\"/srv/containers-data\"" >> /etc/environment
 fi
+if ! grep "DOCKER_HOST_IP" /etc/environment >/dev/null
+then
+	echo "DOCKER_HOST_IP=$(ip -o -4 addr list | grep -Eo '192.([0-9]*\.){2}[0-9]*/' | sed 's|/||' )" >> /etc/environment
+fi
+if ! grep "DNS_SERVER_LAN" /etc/environment >/dev/null
+then
+	echo "DNS_SERVER_LAN=$(ip -o -4 addr list | grep -Eo '192.([0-9]*\.){2}[0-9]*/' | sed 's|/||' )" >> /etc/environment
+fi
+if ! grep "DNS_SERVER_GW" /etc/environment >/dev/null
+then
+	echo "DNS_SERVER_GW=$(ip route | awk '/default/ { print $3 }')" >> /etc/environment
+fi
