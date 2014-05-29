@@ -3,6 +3,7 @@ set -e
 
 setup_dir=/var/lib/setup_tool
 
+tool_cmd=${1}
 tool_name=$(basename ${2} | sed 's|.setup||' )
 tool_path=${setup_dir}/${tool_name}
 tool_file=${tool_path}/${tool_name}
@@ -13,13 +14,18 @@ main() {
 			setup_tool ${2}
 			source ${tool_file}
 			install_tool
-			echo $(get_version) > "${tool_path}/${tool_name}.version"
+			create_version_file
 			;;
 		update)
 			source ${tool_file}
-			if isupdate; then
-				update_tool
+			if update_tool; then
+				create_version_file
 			fi
+			;;
+		restore)
+			source ${tool_file}
+			restore_tool
+			create_version_file
 			;;
 		debug)
 			source ${2}
@@ -37,13 +43,17 @@ setup_tool() {
 	cp ${1} ${tool_file}
 }
 
+create_version_file() {
+	echo $(get_version) > "${tool_path}/${tool_name}.version"
+}
+
 isupdate() {
 	local file_version=$(cat ${tool_path}/${tool_name}.version)
 	local online_version=$(get_version)
 	if [ ${file_version} != ${online_version} ]; then
 		true
 	else
-		false 	
+		false
 	fi
 }
 
