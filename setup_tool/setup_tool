@@ -60,9 +60,9 @@ isupdate() {
 # send_mail(To, From, Subject, Body)
 send_mail() {
 local body=$(sed 's/^\t\+//' <<< "${4}")
-cat <<EOF | msmtp -a default ${1}
-To: ${1}
+cat <<EOF | sendmail -t
 From: ${2}
+To: ${1}
 Subject: ${3}
 ${body}
 EOF
