@@ -31,14 +31,11 @@ set_docker_vars() {
 }
 
 getcontainerid() {
-	local id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.ID}}' ${1} 2>/dev/null))
-	[ -z ${id} ] && id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.id}}' ${1} 2>/dev/null))
-	echo ${id}
+	echo $(docker inspect --format='{{.Id}}' ${1} 2>/dev/null)
 }
 
 getcontainerImageid() {
-	local id=$(sed 's/<no value>//' <<< $(docker inspect --format='{{.Image}}' ${1} 2>/dev/null))
-	echo ${id}
+	echo $(sed 's/<no value>//' <<< $(docker inspect --format='{{.Image}}' ${1} 2>/dev/null))
 }
 
 getallcontainerofimage() {
