@@ -466,11 +466,18 @@ case "$1" in
 			exit 1
 		fi
 		contid=$(getcontainerid ${2})
-		if sudo test -d ${DOCKER_EXECDRIVE_DIR}/${contid}; then
+		NSPID=$(docker inspect --format='{{.State.Pid}}' ${contid})
+		if [ "$NSPID" -ne "0" ]; then
+		#if sudo test -d ${DOCKER_EXECDRIVE_DIR}/${contid}; then
 			nsinit_args=${*:3}
-			[ ${nsinit_args} ] || nsinit_args="bash"
-			nsinit_exec="nsinit exec ${nsinit_args}"
-			sudo bash -c "cd ${DOCKER_EXECDRIVE_DIR}/${contid} && ${nsinit_exec}"
+		#	[ ${nsinit_args} ] || nsinit_args="bash"
+			[ "${nsinit_args}" ] || nsinit_args="su -m root"
+		#	nsinit_exec="nsinit exec ${nsinit_args}"
+		
+		#
+		#	sudo bash -c "cd ${DOCKER_EXECDRIVE_DIR}/${contid} && ${nsinit_exec}"
+			NSENV=$(sudo cat /proc/$NSPID/environ | xargs -0 | grep =)
+			sudo nsenter --target $NSPID --mount --uts --ipc --net --pid -- env -i $NSENV ${nsinit_args}
 		else
 			echo "Not running container"
 			exit 1
@@ -507,7 +514,7 @@ case "$1" in
 		done
 		;;
 	version)
-		echo "VERSION 0.21 __ bySabi"
+		echo "VERSION 0.22 __ bySabi"
 		;;
 	*)
 		echo "Usage: doquer COMMAND [arg...]"
